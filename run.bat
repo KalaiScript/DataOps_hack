@@ -1,21 +1,25 @@
 @echo off
-echo ========================================================
-echo  DataOps Innovation Hackathon - Security Platform
-echo ========================================================
-echo Starting Backend API Server (Port 8000)...
-start "DataOps Backend API" cmd /k "cd /d %~dp0backend && node server.js"
+title DataOps Innovation Hackathon - AI Document Forensics
+echo =========================================================================
+echo  DataOps Innovation Hackathon (SOC ^| NOC ^| VAPT)
+echo  AI-Powered Document Forensics ^& Contextual Intelligence System
+echo =========================================================================
+echo.
+echo [1/2] Launching Backend Forensics API Server (Port 8000)...
+start "DataOps Forensics Backend API" cmd /k "cd /d %~dp0backend && node server.js"
 
 echo Waiting 2 seconds for backend initialization...
 timeout /t 2 /nobreak >nul
 
-echo Starting Frontend Dev Server (Port 5173)...
-start "DataOps Frontend UI" cmd /k "cd /d %~dp0frontend && npm run dev"
+echo [2/2] Launching Frontend Forensics UI (Port 5173)...
+start "DataOps Forensics Workbench UI" cmd /k "cd /d %~dp0frontend && npm.cmd run dev"
 
 echo.
-echo ========================================================
-echo Application is launching!
-echo Backend API:  http://localhost:8000
-echo Frontend UI:  http://localhost:5173
-echo ========================================================
+echo =========================================================================
+echo  System Successfully Launched!
+echo  -----------------------------------------------------------------------
+echo  Frontend Forensic Workbench : http://localhost:5173
+echo  Backend Forensics REST API : http://localhost:8000
+echo  API Documentation / Health : http://localhost:8000/api/stats
+echo =========================================================================
 pause
-
