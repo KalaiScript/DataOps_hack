@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getAuditTrail, getCases, askCopilot } from '../api';
 import { PageHeader, Spinner, ConfidenceBadge } from '../components/ui';
 import { 
@@ -13,10 +14,23 @@ import {
   Hash, 
   CheckCircle2, 
   AlertCircle,
-  Scale
+  Scale,
+  HelpCircle,
+  Zap
 } from 'lucide-react';
 
+const SUGGESTIONS = [
+  "Why is the closing balance on the bank statement suspicious?",
+  "Explain the date of birth discrepancy on the ID card.",
+  "Is there any evidence of cloned or spliced signatures?",
+  "What is the mathematical reconciliation error on the ledger?",
+  "What standard guarantees this evidence is court-admissible?"
+];
+
 export default function Scans() {
+  const [searchParams] = useSearchParams();
+  const caseFromUrl = searchParams.get('case');
+
   const [auditLogs, setAuditLogs] = useState([]);
   const [cases, setCases] = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState("");
@@ -41,7 +55,8 @@ export default function Scans() {
         setAuditLogs(aRes.data);
         setCases(cRes.data);
         if (cRes.data.length > 0) {
-          setSelectedCaseId(cRes.data[0].id);
+          const matched = cRes.data.find(c => c.id === caseFromUrl);
+          setSelectedCaseId(matched ? matched.id : cRes.data[0].id);
         }
       } catch (err) {
         console.error(err);
@@ -50,19 +65,15 @@ export default function Scans() {
       }
     }
     load();
-  }, []);
+  }, [caseFromUrl]);
 
-  const handleAsk = async (e) => {
-    e.preventDefault();
-    if (!query.trim() || asking) return;
-
-    const userQ = query;
-    setQuery("");
-    setMessages(prev => [...prev, { sender: "user", text: userQ }]);
+  const executeQuestion = async (questionText) => {
+    if (!questionText.trim() || asking) return;
+    setMessages(prev => [...prev, { sender: "user", text: questionText }]);
     setAsking(true);
 
     try {
-      const res = await askCopilot(selectedCaseId, userQ);
+      const res = await askCopilot(selectedCaseId, questionText);
       setMessages(prev => [
         ...prev,
         {
@@ -85,6 +96,13 @@ export default function Scans() {
     }
   };
 
+  const handleAsk = (e) => {
+    e.preventDefault();
+    const q = query;
+    setQuery("");
+    executeQuestion(q);
+  };
+
   const activeCase = cases.find(c => c.id === selectedCaseId) || cases[0];
 
   if (loading) return <Spinner />;
@@ -100,7 +118,7 @@ export default function Scans() {
             <select
               value={selectedCaseId}
               onChange={(e) => setSelectedCaseId(e.target.value)}
-              className="bg-gray-900 border border-gray-700 text-xs font-semibold text-white rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="bg-gray-900 border border-gray-700 text-xs font-semibold text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
               {cases.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -113,43 +131,53 @@ export default function Scans() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left: AI Forensic Reasoning Copilot (6 cols) */}
-        <div className="lg:col-span-6 space-y-4 flex flex-col">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Sparkles size={16} className="text-indigo-400" />
-              AI Forensic Reasoning Copilot
-            </h3>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-              EXPLAINABILITY MODEL v2.5
-            </span>
+        {/* Left Column: AI Forensic Copilot (7 cols) */}
+        <div className="lg:col-span-7 space-y-4">
+          <div className="p-4 rounded-xl bg-gray-900/60 border border-gray-800 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                <Bot size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  AI Forensic Reasoning Copilot
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono">
+                    Grounded XAI
+                  </span>
+                </h3>
+                <p className="text-xs text-gray-400">
+                  Target: {activeCase?.title}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-[10px] font-mono text-gray-500">ENGINE</span>
+              <p className="text-xs font-mono font-bold text-indigo-400">Contextual Reasoner v2.5</p>
+            </div>
           </div>
 
-          {/* Chat Window */}
-          <div className="bg-gray-900/80 border border-gray-800 rounded-2xl flex flex-col h-[520px] shadow-xl overflow-hidden">
-            {/* Messages Scroll Area */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-4">
+          {/* Chat Messages Box */}
+          <div className="rounded-2xl bg-gray-900/80 border border-gray-800 flex flex-col h-[520px] overflow-hidden shadow-xl">
+            <div className="flex-1 p-5 overflow-y-auto space-y-4 font-sans text-xs">
               {messages.map((m, idx) => (
                 <div
                   key={idx}
-                  className={`flex items-start gap-3 ${
-                    m.sender === 'user' ? 'flex-row-reverse' : ''
+                  className={`flex gap-3 leading-relaxed ${
+                    m.sender === 'user' ? 'justify-end' : 'justify-start'
                   }`}
                 >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                    m.sender === 'user'
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-800 text-indigo-400 border border-indigo-500/30'
-                  }`}>
-                    {m.sender === 'user' ? <User size={15} /> : <Bot size={16} />}
-                  </div>
+                  {m.sender === 'copilot' && (
+                    <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shrink-0 mt-0.5">
+                      <Sparkles size={13} />
+                    </div>
+                  )}
 
-                  <div className={`max-w-[80%] rounded-2xl p-3.5 text-xs leading-relaxed space-y-2 ${
+                  <div className={`p-4 rounded-2xl max-w-[85%] space-y-2 ${
                     m.sender === 'user'
                       ? 'bg-indigo-600 text-white rounded-tr-none'
-                      : 'bg-gray-950 border border-gray-800 text-gray-200 rounded-tl-none'
+                      : 'bg-gray-950 border border-gray-800 text-gray-200 rounded-tl-none shadow-md'
                   }`}>
-                    <p>{m.text}</p>
+                    <p className="text-xs whitespace-pre-wrap">{m.text}</p>
 
                     {m.citations && m.citations.length > 0 && (
                       <div className="pt-2 border-t border-gray-800 flex items-center gap-1.5 flex-wrap">
@@ -162,40 +190,40 @@ export default function Scans() {
                       </div>
                     )}
                   </div>
+
+                  {m.sender === 'user' && (
+                    <div className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center text-gray-300 shrink-0 mt-0.5">
+                      <User size={13} />
+                    </div>
+                  )}
                 </div>
               ))}
 
               {asking && (
-                <div className="flex items-center gap-2 text-xs text-indigo-400 font-mono animate-pulse">
+                <div className="flex items-center gap-2 text-xs text-indigo-400 font-mono animate-pulse p-2">
                   <Bot size={15} />
                   Copilot is analyzing multi-document evidence matrices...
                 </div>
               )}
             </div>
 
-            {/* Quick Prompt Suggestions */}
-            <div className="px-4 py-2 border-t border-gray-800/80 bg-gray-950/40 flex items-center gap-2 overflow-x-auto">
-              <button
-                type="button"
-                onClick={() => setQuery("Why is the closing balance on the bank statement suspicious?")}
-                className="text-[10px] font-medium px-2.5 py-1 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 whitespace-nowrap transition"
-              >
-                Why is the closing balance suspicious?
-              </button>
-              <button
-                type="button"
-                onClick={() => setQuery("Explain the date of birth discrepancy on the ID card.")}
-                className="text-[10px] font-medium px-2.5 py-1 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 whitespace-nowrap transition"
-              >
-                Explain the DOB discrepancy
-              </button>
-              <button
-                type="button"
-                onClick={() => setQuery("Is there any evidence of cloned or spliced signatures?")}
-                className="text-[10px] font-medium px-2.5 py-1 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 whitespace-nowrap transition"
-              >
-                Check cloned signatures
-              </button>
+            {/* Quick 1-Click Prompt Suggestions */}
+            <div className="px-4 py-2.5 border-t border-gray-800/80 bg-gray-950/60 flex items-center gap-2 overflow-x-auto">
+              <span className="text-[10px] font-bold text-indigo-400 uppercase font-mono tracking-wider shrink-0 flex items-center gap-1">
+                <Zap size={11} /> Quick Ask:
+              </span>
+              {SUGGESTIONS.map((s, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => executeQuestion(s)}
+                  disabled={asking}
+                  className="text-[10px] font-medium px-2.5 py-1 rounded-full bg-gray-800 hover:bg-indigo-600 hover:text-white text-gray-300 whitespace-nowrap transition cursor-pointer border border-gray-700/60"
+                  title="Click to ask immediately"
+                >
+                  {s}
+                </button>
+              ))}
             </div>
 
             {/* Chat Input Bar */}
@@ -206,12 +234,13 @@ export default function Scans() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 disabled={asking}
-                className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-gray-500"
               />
               <button
                 type="submit"
                 disabled={asking || !query.trim()}
-                className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition shadow"
+                className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition shadow"
+                title="Send inquiry"
               >
                 <Send size={15} />
               </button>
@@ -219,57 +248,62 @@ export default function Scans() {
           </div>
         </div>
 
-        {/* Right: Cryptographic Chain-of-Custody Audit Trail (6 cols) */}
-        <div className="lg:col-span-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <History size={16} className="text-purple-400" />
-              Cryptographic Chain-of-Custody Log
-            </h3>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
-              ISO/IEC 27037:2012 COMPLIANT
+        {/* Right Column: ISO/IEC 27037 Cryptographic Chain of Custody (5 cols) */}
+        <div className="lg:col-span-5 space-y-4">
+          <div className="p-4 rounded-xl bg-gray-900/60 border border-gray-800 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <Lock size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  Cryptographic Chain of Custody
+                </h3>
+                <p className="text-xs text-gray-400">
+                  ISO/IEC 27037:2012 Certified Digital Ledger
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              IMMUTABLE
             </span>
           </div>
 
-          <div className="bg-gray-900/80 border border-gray-800 rounded-2xl p-5 space-y-4 shadow-xl">
-            <p className="text-xs text-gray-400">
-              Every digital document ingested, OCR token extracted, and optical tamper finding discovered is immutably timestamped with SHA-256 cryptographic hashes for judicial admissibility.
-            </p>
+          {/* Audit Trail List */}
+          <div className="p-4 rounded-2xl bg-gray-900/80 border border-gray-800 space-y-3 h-[520px] overflow-y-auto">
+            <div className="flex items-center justify-between text-xs text-gray-400 pb-2 border-b border-gray-800">
+              <span>Timestamped Events ({auditLogs.length})</span>
+              <span className="font-mono text-[10px]">SHA-256 HASHED</span>
+            </div>
 
-            <div className="space-y-3 max-h-[430px] overflow-y-auto pr-1">
+            <div className="space-y-3">
               {auditLogs.map((log) => (
-                <div
-                  key={log.id}
-                  className="p-3.5 rounded-xl bg-gray-950 border border-gray-800/80 space-y-1.5 text-xs hover:border-gray-700 transition"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-white flex items-center gap-1.5">
-                      <Lock size={12} className="text-emerald-400" />
+                <div key={log.id} className="p-3 rounded-xl bg-gray-950 border border-gray-800/80 space-y-1.5 hover:border-gray-700 transition">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-indigo-400 flex items-center gap-1.5">
+                      <Hash size={12} />
                       {log.event}
                     </span>
-                    <span className="text-[10px] font-mono text-gray-500">
+                    <span className="font-mono text-[10px] text-gray-500">
                       {new Date(log.timestamp).toLocaleTimeString()}
                     </span>
                   </div>
 
-                  <p className="text-gray-400 text-[11px] font-mono leading-relaxed">
+                  <p className="text-xs text-gray-300 font-mono">
                     {log.details}
                   </p>
 
-                  <div className="pt-1 flex items-center justify-between text-[10px] text-gray-500 font-mono">
-                    <span>Actor: <strong className="text-gray-300">{log.actor}</strong></span>
-                    <span>Doc: <strong className="text-indigo-400">{log.document_id}</strong></span>
+                  <div className="flex items-center justify-between text-[10px] text-gray-500 pt-1 border-t border-gray-800/50">
+                    <span className="flex items-center gap-1 font-mono">
+                      <Terminal size={11} className="text-emerald-400" />
+                      Actor: {log.actor}
+                    </span>
+                    <span className="font-mono text-gray-600">
+                      Case: {log.case_id}
+                    </span>
                   </div>
                 </div>
               ))}
-            </div>
-
-            <div className="pt-3 border-t border-gray-800 flex items-center justify-between text-[11px] text-gray-400">
-              <span className="flex items-center gap-1">
-                <CheckCircle2 size={13} className="text-emerald-400" />
-                Tamper-Resistant Ledger Active
-              </span>
-              <span className="font-mono text-gray-500">NIST SP 800-86</span>
             </div>
           </div>
         </div>
