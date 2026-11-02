@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getCases } from '../api';
 import { 
   PageHeader, 
@@ -24,11 +24,16 @@ import {
   CheckCircle,
   Crosshair,
   Contrast,
-  Flame
+  Flame,
+  GitMerge,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export default function Findings() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const requestedCaseId = searchParams.get('case');
 
   const [cases, setCases] = useState([]);
@@ -473,6 +478,54 @@ export default function Findings() {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Quick Document Navigation & Pager Bar */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-gray-900 border border-gray-800 text-xs shadow-lg">
+            <button
+              onClick={() => {
+                if (selectedDocIndex > 0) {
+                  setSelectedDocIndex(selectedDocIndex - 1);
+                  setSelectedAnomalyId(null);
+                }
+              }}
+              disabled={selectedDocIndex === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-30 text-gray-300 font-medium transition cursor-pointer"
+            >
+              <ChevronLeft size={14} /> Previous Document
+            </button>
+            <div className="text-center font-mono text-gray-400">
+              <span className="text-white font-bold">{activeDoc?.name}</span>
+              <span className="text-[11px] text-gray-500 block">({selectedDocIndex + 1} of {activeCase?.documents?.length || 1})</span>
+            </div>
+            <button
+              onClick={() => {
+                if (selectedDocIndex < (activeCase?.documents?.length || 1) - 1) {
+                  setSelectedDocIndex(selectedDocIndex + 1);
+                  setSelectedAnomalyId(null);
+                }
+              }}
+              disabled={selectedDocIndex >= (activeCase?.documents?.length || 1) - 1}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-30 text-gray-300 font-medium transition cursor-pointer"
+            >
+              Next Document <ChevronRight size={14} />
+            </button>
+          </div>
+
+          {/* Forward Investigation Shortcuts */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(`/correlation?case=${selectedCaseId}`)}
+              className="flex-1 py-2 px-3 rounded-lg bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-2 shadow transition"
+            >
+              <GitMerge size={14} /> Inspect Cross-Doc Correlation Matrix <ArrowRight size={13} />
+            </button>
+            <button
+              onClick={() => navigate(`/dossier?case=${selectedCaseId}`)}
+              className="py-2 px-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-medium border border-gray-700 transition"
+            >
+              Legal Dossier
+            </button>
           </div>
         </div>
 
