@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getCases } from '../api';
 import { 
   PageHeader, 
@@ -20,16 +20,26 @@ import {
   ArrowRight,
   TrendingUp,
   Link,
-  ShieldCheck
+  ShieldCheck,
+  DollarSign,
+  ScanSearch,
+  FileCheck2,
+  Sliders,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function RiskAnalysis() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const requestedCaseId = searchParams.get('case');
 
   const [cases, setCases] = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Income Disparity Simulator State
+  const [declaredIncome, setDeclaredIncome] = useState(145000);
+  const [verifiedInflow, setVerifiedInflow] = useState(38400);
 
   useEffect(() => {
     async function load() {
@@ -52,27 +62,72 @@ export default function RiskAnalysis() {
 
   const activeCase = cases.find(c => c.id === selectedCaseId) || cases[0];
 
+  // Update simulator defaults when case changes
+  useEffect(() => {
+    if (activeCase?.id === 'CASE-2026-8091') {
+      setDeclaredIncome(145000);
+      setVerifiedInflow(38400);
+    } else if (activeCase?.id === 'CASE-2026-8912') {
+      setDeclaredIncome(280000);
+      setVerifiedInflow(72000);
+    } else {
+      setDeclaredIncome(95000);
+      setVerifiedInflow(91000);
+    }
+  }, [selectedCaseId]);
+
+  // Compute disparity metrics
+  const disparityAmount = declaredIncome - verifiedInflow;
+  const disparityPercent = declaredIncome > 0 
+    ? Math.max(0, Math.round(((declaredIncome - verifiedInflow) / declaredIncome) * 100))
+    : 0;
+
+  const getDisparitySeverity = (pct) => {
+    if (pct >= 50) return { label: 'CRITICAL FABRICATION RISK', color: 'text-red-400 bg-red-500/10 border-red-500/30' };
+    if (pct >= 25) return { label: 'HIGH DISCREPANCY DETECTED', color: 'text-orange-400 bg-orange-500/10 border-orange-500/30' };
+    if (pct >= 10) return { label: 'MODERATE VARIANCE', color: 'text-amber-400 bg-amber-500/10 border-amber-500/30' };
+    return { label: 'RECONCILED / CONSISTENT', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' };
+  };
+
+  const disparityBadge = getDisparitySeverity(disparityPercent);
+
   if (loading) return <Spinner />;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       <PageHeader
         title="Cross-Document Correlation & Entity Intelligence"
-        subtitle="Evaluating 20-Point Contextual Intelligence: Cross-referencing entity records to expose hidden fraud across multiple documents"
+        subtitle="Graph-based entity reconciliation, cross-document contradiction detection, and real-time financial disparity simulation"
         action={
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-400">Target Investigation:</span>
-            <select
-              value={selectedCaseId}
-              onChange={(e) => setSelectedCaseId(e.target.value)}
-              className="bg-gray-900 border border-gray-700 text-xs font-semibold text-white rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400">Target Investigation:</span>
+              <select
+                value={selectedCaseId}
+                onChange={(e) => setSelectedCaseId(e.target.value)}
+                className="bg-gray-900 border border-gray-700 text-xs font-semibold text-white rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                {cases.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.id} — {c.applicant_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={() => navigate(`/inspector?case=${selectedCaseId}`)}
+              className="px-3 py-1.5 rounded-lg bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow transition"
             >
-              {cases.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.id} — {c.applicant_name}
-                </option>
-              ))}
-            </select>
+              <ScanSearch size={13} /> Evidence Canvas
+            </button>
+
+            <button
+              onClick={() => navigate(`/dossier?case=${selectedCaseId}`)}
+              className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-medium border border-gray-700 flex items-center gap-1.5 transition"
+            >
+              <FileCheck2 size={13} /> Open Dossier
+            </button>
           </div>
         }
       />
@@ -83,6 +138,7 @@ export default function RiskAnalysis() {
           <div className="flex items-center gap-2 mb-1">
             <span className="font-mono text-xs text-indigo-400 font-bold">{activeCase?.id}</span>
             <span className="text-xs text-gray-400">• {activeCase?.organization}</span>
+            <span className="text-xs text-gray-400">• Applicant: <strong className="text-white">{activeCase?.applicant_name}</strong></span>
           </div>
           <h2 className="text-base font-bold text-white">{activeCase?.title}</h2>
           <p className="text-xs text-gray-300 mt-1 max-w-3xl leading-relaxed">
@@ -100,10 +156,126 @@ export default function RiskAnalysis() {
             <span className="text-[10px] uppercase tracking-wider text-gray-400 block font-mono">Correlated Docs</span>
             <span className="text-xs font-bold text-indigo-300">{activeCase?.documents?.length || 0} Files</span>
           </div>
+          <div className="h-8 w-px bg-gray-800" />
+          <div>
+            <span className="text-[10px] uppercase tracking-wider text-gray-400 block font-mono">Conflict Index</span>
+            <span className="text-xs font-bold text-red-400 font-mono">
+              {activeCase?.cross_document_correlations?.length || 0} Critical
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Cross-Document Contradiction Matrix (The 20-Point Judging Showcase) */}
+      {/* Interactive Income Disparity Simulator */}
+      <div className="p-6 rounded-2xl bg-gray-900/80 border border-indigo-500/30 space-y-5 shadow-xl relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-800 pb-4">
+          <div>
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Sliders size={16} className="text-indigo-400" />
+              Interactive Cross-Document Income Disparity Simulator
+            </h3>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Simulate declared income vs verified banking cash inflows to dynamically test underwriting fraud detection thresholds
+            </p>
+          </div>
+          <span className={`text-xs font-mono font-bold px-3 py-1 rounded-full border ${disparityBadge.color} shrink-0`}>
+            {disparityBadge.label}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Slider 1: Declared Income */}
+          <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
+                <DollarSign size={14} className="text-indigo-400" />
+                Declared Annual Income (Tax Return / Stated):
+              </label>
+              <span className="font-mono text-base font-black text-indigo-300">
+                ${declaredIncome.toLocaleString()}
+              </span>
+            </div>
+            <input
+              type="range"
+              min="20000"
+              max="400000"
+              step="5000"
+              value={declaredIncome}
+              onChange={(e) => setDeclaredIncome(Number(e.target.value))}
+              className="w-full accent-indigo-500 cursor-pointer h-2 bg-gray-800 rounded-lg"
+            />
+            <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+              <span>$20,000</span>
+              <span>$200,000</span>
+              <span>$400,000</span>
+            </div>
+          </div>
+
+          {/* Slider 2: Verified Inflows */}
+          <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
+                <DollarSign size={14} className="text-emerald-400" />
+                Verified Bank Inflows (Annualized 12-Month):
+              </label>
+              <span className="font-mono text-base font-black text-emerald-400">
+                ${verifiedInflow.toLocaleString()}
+              </span>
+            </div>
+            <input
+              type="range"
+              min="10000"
+              max="400000"
+              step="2000"
+              value={verifiedInflow}
+              onChange={(e) => setVerifiedInflow(Number(e.target.value))}
+              className="w-full accent-emerald-500 cursor-pointer h-2 bg-gray-800 rounded-lg"
+            />
+            <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+              <span>$10,000</span>
+              <span>$200,000</span>
+              <span>$400,000</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Live Calculation Output Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+          <div className="p-3 rounded-xl bg-gray-950 border border-gray-800 text-center">
+            <span className="text-[10px] uppercase font-mono text-gray-500 block">Declared Inflow</span>
+            <span className="text-sm font-bold text-indigo-300 font-mono mt-1 block">
+              ${(declaredIncome / 12).toFixed(0)}/mo
+            </span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-gray-950 border border-gray-800 text-center">
+            <span className="text-[10px] uppercase font-mono text-gray-500 block">Verified Inflow</span>
+            <span className="text-sm font-bold text-emerald-400 font-mono mt-1 block">
+              ${(verifiedInflow / 12).toFixed(0)}/mo
+            </span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-gray-950 border border-gray-800 text-center">
+            <span className="text-[10px] uppercase font-mono text-gray-500 block">Disparity Variance</span>
+            <span className="text-sm font-bold text-amber-400 font-mono mt-1 block">
+              -${disparityAmount.toLocaleString()}
+            </span>
+          </div>
+
+          <div className={`p-3 rounded-xl border text-center ${
+            disparityPercent >= 30 ? 'bg-red-950/40 border-red-500/50' : 'bg-emerald-950/20 border-emerald-500/30'
+          }`}>
+            <span className="text-[10px] uppercase font-mono text-gray-400 block font-bold">Unsubstantiated Rate</span>
+            <span className={`text-base font-black font-mono mt-0.5 block ${
+              disparityPercent >= 30 ? 'text-red-400' : 'text-emerald-400'
+            }`}>
+              {disparityPercent}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Cross-Document Contradiction Matrix */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -140,6 +312,13 @@ export default function RiskAnalysis() {
                       {corr.conflict_type}
                     </span>
                     <ConfidenceBadge confidence={corr.confidence} />
+                    <button
+                      onClick={() => navigate(`/inspector?case=${selectedCaseId}`)}
+                      className="px-2.5 py-1 rounded bg-indigo-600/80 hover:bg-indigo-600 text-white text-[11px] font-semibold flex items-center gap-1 transition"
+                      title="Inspect evidence on Visual Canvas"
+                    >
+                      Inspect Evidence <ArrowRight size={11} />
+                    </button>
                   </div>
                 </div>
 
