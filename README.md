@@ -185,32 +185,6 @@ run.bat
 ```
 *This starts both the API server on `http://localhost:8000` and the web interface on `http://localhost:5173`.*
 
-### Method B: Manual CLI Launch
-
-#### 1. Clone & Configure
-```bash
-git clone https://github.com/KalaiScript/DataOps_hack.git
-cd DataOps_hack
-```
-
-#### 2. Start the Backend API
-```bash
-cd backend
-npm install
-node server.js
-```
-*The backend API will initialize at `http://localhost:8000` with the pre-seeded forensic database.*
-
-#### 3. Start the Frontend Forensic Workbench
-```bash
-cd ../frontend
-npm install
-npm run dev
-```
-*Open your browser and navigate to `http://localhost:5173`.*
-
----
-
 ## 📡 REST API Specification
 
 The backend provides a RESTful API for integration into enterprise SOC, VAPT, or orchestration pipelines:
