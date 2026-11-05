@@ -15,7 +15,7 @@ export function SeverityBadge({ severity }) {
   }
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs border tracking-wide uppercase ${badgeStyle}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs border tracking-wide uppercase whitespace-nowrap shrink-0 ${badgeStyle}`}>
       {severity}
     </span>
   );
@@ -27,7 +27,7 @@ export function ConfidenceBadge({ confidence }) {
                 pct >= 85 ? 'text-blue-400 bg-blue-500/10 border-blue-500/30' :
                 'text-amber-400 bg-amber-500/10 border-amber-500/30';
   return (
-    <span className={`text-[11px] px-2 py-0.5 rounded border font-mono font-medium ${color}`}>
+    <span className={`inline-flex items-center text-[11px] px-2 py-0.5 rounded border font-mono font-medium whitespace-nowrap shrink-0 ${color}`}>
       {pct}% Conf.
     </span>
   );
@@ -42,7 +42,7 @@ export function RiskScore({ score }) {
     'text-emerald-400 bg-emerald-500/15 border-emerald-500/30';
 
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold border ${color}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold border whitespace-nowrap shrink-0 ${color}`}>
       {val.toFixed(1)} / 10
     </span>
   );
@@ -63,7 +63,7 @@ export function StatusBadge({ status }) {
   }
 
   return (
-    <span className={`text-xs px-2.5 py-0.5 rounded-full border ${style}`}>
+    <span className={`inline-flex items-center text-xs px-2.5 py-0.5 rounded-full border whitespace-nowrap shrink-0 ${style}`}>
       {status}
     </span>
   );
