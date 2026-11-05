@@ -163,17 +163,17 @@ function WorkbenchShell() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Fast-Track Interactive Header Bar */}
-        <header className="px-6 py-2.5 bg-gray-900/95 border-b border-gray-800 flex items-center justify-between gap-4 shrink-0 z-20">
+        <header className="px-4 lg:px-6 py-2.5 bg-gray-900/95 border-b border-gray-800 flex items-center justify-between gap-3 shrink-0 z-20 overflow-x-auto scrollbar-none">
           {/* Active Case Switcher */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <FolderOpen size={15} className="text-indigo-400" />
-              <span className="text-xs font-bold text-gray-300 uppercase tracking-wider hidden sm:inline">Case:</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5">
+              <FolderOpen size={14} className="text-indigo-400 shrink-0" />
+              <span className="text-xs font-bold text-gray-300 uppercase tracking-wider hidden xl:inline">Case:</span>
             </div>
             <select
               value={activeCaseId}
               onChange={(e) => handleCaseChange(e.target.value)}
-              className="bg-gray-950 border border-gray-700 hover:border-gray-600 text-xs font-semibold text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+              className="bg-gray-950 border border-gray-700 hover:border-gray-600 text-xs font-semibold text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer max-w-[190px] sm:max-w-[230px] md:max-w-[270px] truncate shrink-0"
             >
               {cases.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -184,7 +184,7 @@ function WorkbenchShell() {
 
             {activeCase && (
               <span
-                className={`hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold border whitespace-nowrap shadow-sm shrink-0 ${
+                className={`hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold border whitespace-nowrap shadow-sm shrink-0 ${
                   activeCase.risk_score >= 7.0 
                     ? 'bg-red-500/15 text-red-400 border-red-500/30' 
                     : activeCase.risk_score >= 4.0 
@@ -220,9 +220,9 @@ function WorkbenchShell() {
             )}
           </div>
 
-          {/* 5-Step Guided Investigation Stepper */}
-          <div className="hidden lg:flex items-center gap-1 bg-gray-950/80 p-1 rounded-lg border border-gray-800">
-            <span className="text-[10px] font-bold text-gray-400 px-2 uppercase tracking-widest font-mono">
+          {/* 5-Step Guided Investigation Stepper (Never clips or truncates) */}
+          <div className="hidden lg:flex items-center gap-0.5 bg-gray-950/80 p-1 rounded-lg border border-gray-800 shrink-0">
+            <span className="text-[10px] font-bold text-gray-400 px-2 uppercase tracking-widest font-mono shrink-0">
               Guide:
             </span>
             {STEPS.map((s, idx) => {
@@ -231,50 +231,50 @@ function WorkbenchShell() {
                 <button
                   key={s.step}
                   onClick={() => navigate(`${s.path}?case=${activeCaseId}`)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition shrink-0 whitespace-nowrap ${
                     isActive
                       ? 'bg-indigo-600 text-white font-bold shadow'
                       : 'text-gray-400 hover:text-white hover:bg-gray-800/60'
                   }`}
                   title={`${s.label}: ${s.hint}`}
                 >
-                  <span className={`w-4 h-4 rounded-full text-[9px] font-mono flex items-center justify-center ${
+                  <span className={`w-4 h-4 rounded-full text-[9px] font-mono flex items-center justify-center shrink-0 ${
                     isActive ? 'bg-white text-indigo-700 font-bold' : 'bg-gray-800 text-gray-400'
                   }`}>
                     {s.step}
                   </span>
-                  <span>{s.label}</span>
-                  {idx < STEPS.length - 1 && <ChevronRight size={11} className="text-gray-600 ml-1" />}
+                  <span className="whitespace-nowrap">{s.label}</span>
+                  {idx < STEPS.length - 1 && <ChevronRight size={11} className="text-gray-600 ml-1 shrink-0" />}
                 </button>
               );
             })}
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => navigate(`/pipeline?case=${activeCaseId}`)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs font-semibold shadow transition"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs font-semibold shadow transition shrink-0 whitespace-nowrap"
               title="Execute 10-stage forensic pipeline on selected case"
             >
-              <Play size={12} />
+              <Play size={12} className="shrink-0" />
               <span className="hidden sm:inline">Run Pipeline</span>
             </button>
             <button
               onClick={() => navigate(`/dossier?case=${activeCaseId}`)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-medium border border-gray-700 transition"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-medium border border-gray-700 transition shrink-0 whitespace-nowrap"
               title="View and print ISO 27037 investigation dossier"
             >
-              <Printer size={13} />
+              <Printer size={12} className="shrink-0" />
               <span className="hidden sm:inline">Dossier</span>
             </button>
             <button
               onClick={handleReset}
               disabled={resetting}
-              className="p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 border border-gray-700 transition"
+              className="p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 border border-gray-700 transition shrink-0"
               title="Reset demonstration cases to pristine status"
             >
-              <RotateCcw size={13} className={resetting ? 'animate-spin' : ''} />
+              <RotateCcw size={12} className={resetting ? 'animate-spin' : ''} />
             </button>
           </div>
         </header>
