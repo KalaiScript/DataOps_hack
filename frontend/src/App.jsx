@@ -183,14 +183,39 @@ function WorkbenchShell() {
             </select>
 
             {activeCase && (
-              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border hidden md:inline ${
-                activeCase.risk_score >= 7.0 
-                  ? 'bg-red-500/20 text-red-400 border-red-500/40' 
-                  : activeCase.risk_score >= 4.0 
-                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' 
-                  : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-              }`}>
-                {activeCase.risk_level || 'Active'}
+              <span
+                className={`hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold border whitespace-nowrap shadow-sm shrink-0 ${
+                  activeCase.risk_score >= 7.0 
+                    ? 'bg-red-500/15 text-red-400 border-red-500/30' 
+                    : activeCase.risk_score >= 4.0 
+                    ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' 
+                    : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                }`}
+                title={activeCase.risk_level || 'Active'}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                    activeCase.risk_score >= 7.0 
+                      ? 'bg-red-400 animate-pulse' 
+                      : activeCase.risk_score >= 4.0 
+                      ? 'bg-amber-400' 
+                      : 'bg-emerald-400'
+                  }`}
+                />
+                <span>
+                  {activeCase.risk_score >= 7.0 
+                    ? 'HIGH RISK' 
+                    : activeCase.risk_score >= 4.0 
+                    ? 'MEDIUM RISK' 
+                    : activeCase.risk_score 
+                    ? 'LOW RISK' 
+                    : 'UNASSESSED'}
+                </span>
+                {activeCase.risk_score ? (
+                  <span className="opacity-70 text-[10px] font-normal">
+                    ({activeCase.risk_score.toFixed(1)}/10)
+                  </span>
+                ) : null}
               </span>
             )}
           </div>

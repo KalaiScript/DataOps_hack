@@ -9,7 +9,7 @@
       "risk_score": 9.4,
       "risk_level": "High Risk - Suspicious Manipulation",
       "created_at": "2026-11-01T10:15:00.000Z",
-      "updated_at": "2026-11-01T16:49:23.625Z",
+      "updated_at": "2026-11-05T14:33:27.399Z",
       "investigator": "Forensic Analyst Team (AI-Assisted)",
       "documents_count": 3,
       "anomalies_count": 8,
@@ -951,6 +951,15 @@
     }
   ],
   "audit_trail": [
+    {
+      "id": "AUD-1793889207399",
+      "timestamp": "2026-11-05T14:33:27.399Z",
+      "case_id": "CASE-2026-8091",
+      "document_id": "ALL",
+      "event": "10-Stage Pipeline Executed",
+      "actor": "DataOps Forensic Orchestrator",
+      "details": "Full pipeline completed across 3 document(s). Risk Score: 9.4. Total latency: 2520ms."
+    },
     {
       "id": "AUD-1793551763625",
       "timestamp": "2026-11-01T16:49:23.625Z",
