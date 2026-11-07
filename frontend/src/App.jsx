@@ -163,28 +163,25 @@ function WorkbenchShell() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Fast-Track Interactive Header Bar */}
-        <header className="px-4 lg:px-6 py-2.5 bg-gray-900/95 border-b border-gray-800 flex items-center justify-between gap-3 shrink-0 z-20 overflow-x-auto scrollbar-none">
+        <header className="px-4 lg:px-6 py-2.5 bg-gray-900/95 border-b border-gray-800 flex items-center justify-between gap-2 lg:gap-4 shrink-0 z-20">
           {/* Active Case Switcher */}
           <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1.5">
-              <FolderOpen size={14} className="text-indigo-400 shrink-0" />
-              <span className="text-xs font-bold text-gray-300 uppercase tracking-wider hidden xl:inline">Case:</span>
-            </div>
+            <FolderOpen size={14} className="text-indigo-400 shrink-0" />
             <select
               value={activeCaseId}
               onChange={(e) => handleCaseChange(e.target.value)}
-              className="bg-gray-950 border border-gray-700 hover:border-gray-600 text-xs font-semibold text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer max-w-[190px] sm:max-w-[230px] md:max-w-[270px] truncate shrink-0"
+              className="bg-gray-950 border border-gray-700 hover:border-gray-600 text-xs font-semibold text-white rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer w-36 sm:w-44 md:w-52 lg:w-56 truncate shrink-0"
             >
               {cases.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.id} — {c.applicant_name} ({c.risk_score ? `Score: ${c.risk_score}` : 'Unassessed'})
+                  {c.id} — {c.applicant_name}
                 </option>
               ))}
             </select>
 
             {activeCase && (
               <span
-                className={`hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold border whitespace-nowrap shadow-sm shrink-0 ${
+                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border whitespace-nowrap shadow-sm shrink-0 ${
                   activeCase.risk_score >= 7.0 
                     ? 'bg-red-500/15 text-red-400 border-red-500/30' 
                     : activeCase.risk_score >= 4.0 
@@ -202,49 +199,46 @@ function WorkbenchShell() {
                       : 'bg-emerald-400'
                   }`}
                 />
-                <span>
+                <span className="hidden xl:inline">
                   {activeCase.risk_score >= 7.0 
                     ? 'HIGH RISK' 
                     : activeCase.risk_score >= 4.0 
-                    ? 'MEDIUM RISK' 
+                    ? 'MED RISK' 
                     : activeCase.risk_score 
                     ? 'LOW RISK' 
                     : 'UNASSESSED'}
                 </span>
-                {activeCase.risk_score ? (
-                  <span className="opacity-70 text-[10px] font-normal">
-                    ({activeCase.risk_score.toFixed(1)}/10)
-                  </span>
-                ) : null}
+                <span>
+                  {activeCase.risk_score ? activeCase.risk_score.toFixed(1) : '—'}
+                </span>
               </span>
             )}
           </div>
 
-          {/* 5-Step Guided Investigation Stepper (Never clips or truncates) */}
-          <div className="hidden lg:flex items-center gap-0.5 bg-gray-950/80 p-1 rounded-lg border border-gray-800 shrink-0">
-            <span className="text-[10px] font-bold text-gray-400 px-2 uppercase tracking-widest font-mono shrink-0">
+          {/* 5-Step Guided Investigation Stepper (Sleek Compact Segmented Bar) */}
+          <div className="hidden md:flex items-center bg-gray-950/90 p-0.5 rounded-lg border border-gray-800 shrink-0">
+            <span className="text-[10px] font-bold text-gray-500 px-2 uppercase tracking-widest font-mono hidden xl:inline">
               Guide:
             </span>
-            {STEPS.map((s, idx) => {
+            {STEPS.map((s) => {
               const isActive = location.pathname === s.path;
               return (
                 <button
                   key={s.step}
                   onClick={() => navigate(`${s.path}?case=${activeCaseId}`)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition shrink-0 whitespace-nowrap ${
+                  className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium transition shrink-0 whitespace-nowrap ${
                     isActive
                       ? 'bg-indigo-600 text-white font-bold shadow'
                       : 'text-gray-400 hover:text-white hover:bg-gray-800/60'
                   }`}
                   title={`${s.label}: ${s.hint}`}
                 >
-                  <span className={`w-4 h-4 rounded-full text-[9px] font-mono flex items-center justify-center shrink-0 ${
+                  <span className={`w-3.5 h-3.5 rounded-full text-[9px] font-mono flex items-center justify-center shrink-0 ${
                     isActive ? 'bg-white text-indigo-700 font-bold' : 'bg-gray-800 text-gray-400'
                   }`}>
                     {s.step}
                   </span>
-                  <span className="whitespace-nowrap">{s.label}</span>
-                  {idx < STEPS.length - 1 && <ChevronRight size={11} className="text-gray-600 ml-1 shrink-0" />}
+                  <span>{s.label}</span>
                 </button>
               );
             })}
@@ -254,11 +248,11 @@ function WorkbenchShell() {
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => navigate(`/pipeline?case=${activeCaseId}`)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs font-semibold shadow transition shrink-0 whitespace-nowrap"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs font-semibold shadow transition shrink-0 whitespace-nowrap"
               title="Execute 10-stage forensic pipeline on selected case"
             >
               <Play size={12} className="shrink-0" />
-              <span className="hidden sm:inline">Run Pipeline</span>
+              <span className="hidden sm:inline">Run</span>
             </button>
             <button
               onClick={() => navigate(`/dossier?case=${activeCaseId}`)}
