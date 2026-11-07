@@ -714,21 +714,57 @@ app.post('/api/cases/:id/ask-copilot', (req, res) => {
   let citedFindings = [];
   let confidence = 0.96;
 
-  if (qLower.includes("income") || qLower.includes("salary") || qLower.includes("money") || qLower.includes("bank")) {
-    answer = `Based on multi-document cross-correlation, there is a severe discrepancy regarding applicant income. In Document '${c.documents[0]?.name || "Application Form"}', the declared monthly income is $14,500.00 ($174,000.00/year). However, the Bank Statement (${c.documents[1]?.name || "Statement"}) reveals average quarterly deposits of only $3,833.33/month, indicating an unexplained +277% inflation. Furthermore, the closing balance on the bank statement was artificially altered from $14,070.30 to $94,200.30, exhibiting font glyph mismatch and ELA boundary splicing.`;
-    citedFindings = ["XCORR-001", "VIS-002", "VIS-003"];
-  } else if (qLower.includes("dob") || qLower.includes("birth") || qLower.includes("age") || qLower.includes("identity")) {
-    answer = `The National ID card shows clear evidence of localized overwriting in the Date of Birth field. Error Level Analysis and pixel gradient variance show that the year was modified to '1985' over the original '1995', artificially increasing the applicant's age by 10 years to bypass underwriting thresholds. The surrounding background micro-pattern shows 28% discontinuity.`;
-    citedFindings = ["VIS-004", "XCORR-002"];
-  } else if (qLower.includes("signature") || qLower.includes("sign")) {
-    answer = `Signature analysis identified an exact morphological duplicate (cosine stroke similarity 0.998) between the signature on the Application Form and the National ID card. Natural signatures by the same human never achieve identical pixel geometry; this confirms a digital copy-paste cutouts transfer.`;
-    citedFindings = ["VIS-001", "XCORR-003"];
-  } else if (qLower.includes("standard") || qLower.includes("iso") || qLower.includes("legal") || qLower.includes("court")) {
-    answer = `All evidence collection and traceability within this case adheres to ISO/IEC 27037 (Digital Evidence Identification & Preservation) and NIST SP 800-86. Each uploaded document is cryptographically hashed with SHA-256 upon ingestion, and every anomaly is mapped to precise normalized bounding-box coordinates for audit defensibility.`;
-    citedFindings = ["AUDIT-TRAIL", "CHAIN-OF-CUSTODY"];
-  } else {
-    answer = `Analysis of Case ${c.id} indicates an overall Risk Score of ${c.risk_score} (${c.risk_level}). We identified ${c.anomalies_count} primary anomalies across ${c.documents.length} submitted documents. The primary issues involve digital font alteration on financial ledgers, date-of-birth overwriting on government ID, and cross-document income inflation. Review the Evidence Inspector tab for interactive coordinate highlights.`;
-    citedFindings = c.cross_document_correlations ? c.cross_document_correlations.map(x => x.id) : [];
+  // Case 2: Medical Claim Over-Billing
+  if (c.id === 'CASE-2026-8092') {
+    if (qLower.includes("date") || qLower.includes("surgery") || qLower.includes("discharge") || qLower.includes("chronolog") || qLower.includes("time")) {
+      answer = `Medical claim cross-correlation revealed a critical temporal contradiction: Hospital Discharge Date (18/09/2026) precedes the billed Intensive Surgical Procedure date (24/09/2026) by 6 calendar days. Chronologically impossible medical claims indicate post-discharge invoice fabrication and billing manipulation.`;
+      citedFindings = ["XCORR-8092-1", "VIS-8092-2"];
+    } else if (qLower.includes("invoice") || qLower.includes("bill") || qLower.includes("math") || qLower.includes("amount") || qLower.includes("ledger") || qLower.includes("reconcil") || qLower.includes("money") || qLower.includes("total")) {
+      answer = `Arithmetic validation of invoice line-items detected substantial over-billing. Stated procedural fees ($8,200.00 + $4,100.00 + $2,500.00) total $14,800.00, but the reported invoice grand total was modified to $33,200.00 (+Δ $18,400.00 fraudulent surplus). Font kerning and baseline alignment variance confirm digit replacement.`;
+      citedFindings = ["MATH-8092-1", "VIS-8092-1"];
+    } else if (qLower.includes("signature") || qLower.includes("stamp") || qLower.includes("doctor") || qLower.includes("physician")) {
+      answer = `The treating physician's official digital stamp was flagged for low resolution (72 DPI) and lacks cryptographic signing metadata, indicating an external web raster graphic pasted into the document rather than an authenticated hospital digital seal.`;
+      citedFindings = ["VIS-8092-3"];
+    } else if (qLower.includes("standard") || qLower.includes("iso") || qLower.includes("legal") || qLower.includes("court")) {
+      answer = `Evidence for Case ${c.id} conforms to ISO/IEC 27037 standards. Every line-item anomaly and pixel-level stamp alteration is preserved with SHA-256 cryptographic provenance and normalized pixel coordinates for forensic admissibility.`;
+      citedFindings = ["ISO-27037", "SHA-256", "CHAIN-OF-CUSTODY"];
+    } else {
+      answer = `Case ${c.id} (${c.title}) presents a Risk Score of ${c.risk_score} (${c.risk_level}). Primary findings reveal +$18,400 arithmetic invoice inflation, hospital discharge dates preceding surgery dates by 6 days, and an unauthenticated physician digital stamp.`;
+      citedFindings = ["XCORR-8092-1", "MATH-8092-1", "VIS-8092-1"];
+    }
+  } 
+  // Case 3: Authentic Baseline (Apex Cybernetics)
+  else if (c.id === 'CASE-2026-8093') {
+    if (qLower.includes("standard") || qLower.includes("iso") || qLower.includes("legal") || qLower.includes("court")) {
+      answer = `All documents for ${c.applicant_name} are cryptographically anchored with SHA-256 digests and validated under ISO/IEC 27037 guidelines. The chain of custody confirms zero tampering across all ingestion events.`;
+      citedFindings = ["ISO-27037", "AUDIT-001"];
+    } else {
+      answer = `Case ${c.id} (${c.applicant_name}) is a verified authentic baseline with a Risk Score of ${c.risk_score} (${c.risk_level}). All tax registration numbers, organizational certificates, and banking records match regulatory databases with 100% mathematical consistency and zero visual pixel manipulation.`;
+      citedFindings = ["VERIF-001", "VERIF-002", "VERIF-003"];
+      confidence = 0.99;
+    }
+  }
+  // Case 1 (Default): Commercial Loan / Sterling Alterations
+  else {
+    if (qLower.includes("ledger") || qLower.includes("math") || qLower.includes("reconcil") || qLower.includes("equation") || qLower.includes("arithmetic") || qLower.includes("discrepancy")) {
+      answer = `Ledger arithmetic verification detected a critical formula anomaly on the Bank Statement. Opening Balance ($12,410.50) + Credits ($11,500.00) - Debits ($9,840.20) mathematically equates to $14,070.30. However, the reported closing balance was manually inflated to $94,200.30 (+Δ $80,130.00 discrepancy). Error Level Analysis (ELA) confirms localized digital font glyph splicing on digits '9' and '4'.`;
+      citedFindings = ["MATH-001", "VIS-002", "VIS-003", "XCORR-001"];
+    } else if (qLower.includes("closing balance") || qLower.includes("balance") || qLower.includes("income") || qLower.includes("salary") || qLower.includes("money") || qLower.includes("bank")) {
+      answer = `Based on multi-document cross-correlation, there is a severe discrepancy regarding applicant income. In Document '${c.documents[0]?.name || "Application Form"}', declared monthly income is $14,500.00 ($174,000.00/year). However, the Bank Statement (${c.documents[1]?.name || "Statement"}) reveals average quarterly deposits of only $3,833.33/month (+277% unexplained inflation). Furthermore, the closing balance was artificially altered from $14,070.30 to $94,200.30, exhibiting font glyph mismatch and ELA boundary splicing.`;
+      citedFindings = ["XCORR-001", "VIS-002", "VIS-003"];
+    } else if (qLower.includes("dob") || qLower.includes("birth") || qLower.includes("age") || qLower.includes("identity")) {
+      answer = `The National ID card shows clear evidence of localized overwriting in the Date of Birth field. Error Level Analysis and pixel gradient variance show that the year was modified to '1985' over the original '1995', artificially increasing the applicant's age by 10 years to bypass underwriting thresholds. The surrounding background micro-pattern shows 28% discontinuity.`;
+      citedFindings = ["VIS-004", "XCORR-002"];
+    } else if (qLower.includes("signature") || qLower.includes("sign")) {
+      answer = `Signature analysis identified an exact morphological duplicate (cosine stroke similarity 0.998) between the signature on the Application Form and the National ID card. Natural signatures by the same human never achieve identical pixel geometry; this confirms a digital copy-paste cutouts transfer.`;
+      citedFindings = ["VIS-001", "XCORR-003"];
+    } else if (qLower.includes("standard") || qLower.includes("iso") || qLower.includes("legal") || qLower.includes("court")) {
+      answer = `All evidence collection and traceability within this case adheres to ISO/IEC 27037 (Digital Evidence Identification & Preservation) and NIST SP 800-86. Each uploaded document is cryptographically hashed with SHA-256 upon ingestion, and every anomaly is mapped to precise normalized bounding-box coordinates for audit defensibility.`;
+      citedFindings = ["AUDIT-TRAIL", "CHAIN-OF-CUSTODY"];
+    } else {
+      answer = `Analysis of Case ${c.id} indicates an overall Risk Score of ${c.risk_score} (${c.risk_level}). We identified ${c.anomalies_count} primary anomalies across ${c.documents.length} submitted documents. The primary issues involve digital font alteration on financial ledgers, date-of-birth overwriting on government ID, and cross-document income inflation. Review the Evidence Canvas and Cross-Doc Matrix for coordinate highlights.`;
+      citedFindings = c.cross_document_correlations ? c.cross_document_correlations.map(x => x.id) : [];
+    }
   }
 
   res.json({

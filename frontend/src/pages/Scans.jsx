@@ -19,13 +19,28 @@ import {
   Zap
 } from 'lucide-react';
 
-const SUGGESTIONS = [
-  "Why is the closing balance on the bank statement suspicious?",
-  "Explain the date of birth discrepancy on the ID card.",
-  "Is there any evidence of cloned or spliced signatures?",
-  "What is the mathematical reconciliation error on the ledger?",
-  "What standard guarantees this evidence is court-admissible?"
-];
+const CASE_SUGGESTIONS = {
+  'CASE-2026-8091': [
+    "Why is the closing balance on the bank statement suspicious?",
+    "Explain the date of birth discrepancy on the ID card.",
+    "Is there any evidence of cloned or spliced signatures?",
+    "What is the mathematical reconciliation error on the ledger?",
+    "What standard guarantees this evidence is court-admissible?"
+  ],
+  'CASE-2026-8092': [
+    "Explain the chronological contradiction between surgery and discharge dates.",
+    "What is the arithmetic over-billing discrepancy on the invoice?",
+    "Was the physician digital stamp or seal authenticated?",
+    "Summarize all visual and contextual anomalies for this claim.",
+    "What standard guarantees this evidence is court-admissible?"
+  ],
+  'CASE-2026-8093': [
+    "Are all entity tax registration numbers and documents verified authentic?",
+    "Were any visual glyphs, font splices, or metadata anomalies detected?",
+    "Explain the cryptographic signature verification results.",
+    "What standard guarantees this evidence is court-admissible?"
+  ]
+};
 
 export default function Scans() {
   const [searchParams] = useSearchParams();
@@ -34,6 +49,7 @@ export default function Scans() {
   const [auditLogs, setAuditLogs] = useState([]);
   const [cases, setCases] = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState("");
+  const [filterByCase, setFilterByCase] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Copilot Chat State
@@ -104,6 +120,10 @@ export default function Scans() {
   };
 
   const activeCase = cases.find(c => c.id === selectedCaseId) || cases[0];
+  const suggestions = CASE_SUGGESTIONS[selectedCaseId] || CASE_SUGGESTIONS['CASE-2026-8091'];
+  const displayedLogs = filterByCase
+    ? auditLogs.filter(l => l.case_id === selectedCaseId)
+    : auditLogs;
 
   if (loading) return <Spinner />;
 
@@ -212,7 +232,7 @@ export default function Scans() {
               <span className="text-[10px] font-bold text-indigo-400 uppercase font-mono tracking-wider shrink-0 flex items-center gap-1">
                 <Zap size={11} /> Quick Ask:
               </span>
-              {SUGGESTIONS.map((s, i) => (
+              {suggestions.map((s, i) => (
                 <button
                   key={i}
                   type="button"
@@ -272,38 +292,58 @@ export default function Scans() {
           {/* Audit Trail List */}
           <div className="p-4 rounded-2xl bg-gray-900/80 border border-gray-800 space-y-3 h-[520px] overflow-y-auto">
             <div className="flex items-center justify-between text-xs text-gray-400 pb-2 border-b border-gray-800">
-              <span>Timestamped Events ({auditLogs.length})</span>
+              <div className="flex items-center gap-2">
+                <span>Events ({displayedLogs.length})</span>
+                <button
+                  type="button"
+                  onClick={() => setFilterByCase(!filterByCase)}
+                  className={`text-[10px] font-mono px-2 py-0.5 rounded border transition cursor-pointer ${
+                    filterByCase 
+                      ? 'bg-indigo-600/30 text-indigo-300 border-indigo-500/50' 
+                      : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'
+                  }`}
+                  title="Toggle filter by active case"
+                >
+                  {filterByCase ? `Case: ${selectedCaseId}` : 'Show All'}
+                </button>
+              </div>
               <span className="font-mono text-[10px]">SHA-256 HASHED</span>
             </div>
 
             <div className="space-y-3">
-              {auditLogs.map((log) => (
-                <div key={log.id} className="p-3 rounded-xl bg-gray-950 border border-gray-800/80 space-y-1.5 hover:border-gray-700 transition">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-bold text-indigo-400 flex items-center gap-1.5">
-                      <Hash size={12} />
-                      {log.event}
-                    </span>
-                    <span className="font-mono text-[10px] text-gray-500">
-                      {new Date(log.timestamp).toLocaleTimeString()}
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-gray-300 font-mono">
-                    {log.details}
-                  </p>
-
-                  <div className="flex items-center justify-between text-[10px] text-gray-500 pt-1 border-t border-gray-800/50">
-                    <span className="flex items-center gap-1 font-mono">
-                      <Terminal size={11} className="text-emerald-400" />
-                      Actor: {log.actor}
-                    </span>
-                    <span className="font-mono text-gray-600">
-                      Case: {log.case_id}
-                    </span>
-                  </div>
+              {displayedLogs.length === 0 ? (
+                <div className="text-center py-12 text-xs text-gray-500">
+                  No audit logs recorded for {selectedCaseId}.
                 </div>
-              ))}
+              ) : (
+                displayedLogs.map((log) => (
+                  <div key={log.id} className="p-3 rounded-xl bg-gray-950 border border-gray-800/80 space-y-1.5 hover:border-gray-700 transition">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-bold text-indigo-400 flex items-center gap-1.5">
+                        <Hash size={12} />
+                        {log.event}
+                      </span>
+                      <span className="font-mono text-[10px] text-gray-500">
+                        {new Date(log.timestamp).toLocaleTimeString()}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-gray-300 font-mono">
+                      {log.details}
+                    </p>
+
+                    <div className="flex items-center justify-between text-[10px] text-gray-500 pt-1 border-t border-gray-800/50">
+                      <span className="flex items-center gap-1 font-mono">
+                        <Terminal size={11} className="text-emerald-400" />
+                        Actor: {log.actor}
+                      </span>
+                      <span className="font-mono text-gray-600">
+                        Case: {log.case_id}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
