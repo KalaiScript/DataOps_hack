@@ -704,18 +704,38 @@ app.post('/api/cases/:id/analyze', (req, res) => {
 // Ask AI Forensic Copilot (Explainability & Anomaly Reasoning)
 app.post('/api/cases/:id/ask-copilot', (req, res) => {
   const db = readDb();
-  const c = db.cases.find(x => x.id === req.params.id);
+  const c = db.cases.find(x => x.id === req.params.id) || db.cases[0];
   if (!c) return res.status(404).json({ error: "Case not found" });
 
   const { query } = req.body;
-  const qLower = (query || '').toLowerCase();
+  const qLower = (query || '').toLowerCase().trim();
 
   let answer = "";
   let citedFindings = [];
   let confidence = 0.96;
 
-  // Case 2: Medical Claim Over-Billing
-  if (c.id === 'CASE-2026-8092') {
+  // 1. Natural Conversational Greetings
+  const greetings = ["hi", "hello", "hey", "good morning", "good afternoon", "good evening", "howdy", "sup", "greetings"];
+  const isGreeting = greetings.some(g => qLower === g || qLower.startsWith(g + " ") || qLower.startsWith(g + "!") || qLower.startsWith(g + ","));
+
+  const helpKeywords = ["who are you", "what can you do", "help", "capabilities", "what are you", "how does this work"];
+  const isHelp = helpKeywords.some(h => qLower.includes(h));
+
+  const summaryKeywords = ["summary", "overview", "what happened", "explain case", "tell me about", "what is wrong", "findings", "report", "what did you find"];
+  const isSummary = summaryKeywords.some(s => qLower.includes(s));
+
+  if (isGreeting) {
+    answer = `Hello! I am your AI Forensic Reasoning Copilot assigned to Case ${c.id} (${c.applicant_name} • ${c.organization}). I have cross-correlated ${c.documents?.length || 2} evidence documents and flagged ${c.anomalies_count || 4} critical discrepancies (Risk Score: ${c.risk_score}/10). How can I assist you with this investigation? You can ask me about income inflation, the date of birth alteration, signature forgery, or ledger calculation discrepancies.`;
+    citedFindings = ["CASE-CONTEXT", "AI-READY"];
+  } else if (isHelp) {
+    answer = `I am the DataOps Contextual Intelligence Copilot, trained on ISO/IEC 27037 digital forensics standards. My capabilities include:\n1. Cross-Document Entity Correlation (exposing hidden contradictions between applications, tax forms, and bank statements)\n2. Computer Vision Error Level Analysis (ELA) for detecting pixel splicing and digital overwriting\n3. Mathematical Ledger Reconciliation (validating opening balances, credit/debit sums, and closing formulas)\n4. Signature & Biometric Stroke Analysis (detecting digital copy-paste duplication).\nAsk me any question regarding the evidence in Case ${c.id}!`;
+    citedFindings = ["CAPABILITIES", "ISO-27037"];
+  } else if (isSummary) {
+    answer = `Investigation Summary for ${c.id} (${c.title}):\n• Entity: ${c.applicant_name} (${c.organization})\n• Risk Assessment: ${c.risk_score}/10 — ${c.risk_level}\n• Primary Findings: ${c.summary}\n• Verified Documents: ${c.documents?.map(d => d.name).join(", ") || 'Multiple files'}.\nUse the Suggested Questions below or explore the Evidence Canvas to examine highlighted bounding boxes.`;
+    citedFindings = c.cross_document_correlations ? c.cross_document_correlations.map(x => x.id) : ["SUMMARY"];
+  }
+  // 2. Case 2: Medical Claim Over-Billing
+  else if (c.id === 'CASE-2026-8092') {
     if (qLower.includes("date") || qLower.includes("surgery") || qLower.includes("discharge") || qLower.includes("chronolog") || qLower.includes("time")) {
       answer = `Medical claim cross-correlation revealed a critical temporal contradiction: Hospital Discharge Date (18/09/2026) precedes the billed Intensive Surgical Procedure date (24/09/2026) by 6 calendar days. Chronologically impossible medical claims indicate post-discharge invoice fabrication and billing manipulation.`;
       citedFindings = ["XCORR-8092-1", "VIS-8092-2"];
@@ -733,7 +753,7 @@ app.post('/api/cases/:id/ask-copilot', (req, res) => {
       citedFindings = ["XCORR-8092-1", "MATH-8092-1", "VIS-8092-1"];
     }
   } 
-  // Case 3: Authentic Baseline (Apex Cybernetics)
+  // 3. Case 3: Authentic Baseline (Apex Cybernetics)
   else if (c.id === 'CASE-2026-8093') {
     if (qLower.includes("standard") || qLower.includes("iso") || qLower.includes("legal") || qLower.includes("court")) {
       answer = `All documents for ${c.applicant_name} are cryptographically anchored with SHA-256 digests and validated under ISO/IEC 27037 guidelines. The chain of custody confirms zero tampering across all ingestion events.`;
@@ -744,12 +764,12 @@ app.post('/api/cases/:id/ask-copilot', (req, res) => {
       confidence = 0.99;
     }
   }
-  // Case 1 (Default): Commercial Loan / Sterling Alterations
+  // 4. Case 1 (Default): Commercial Loan / Sterling Alterations
   else {
     if (qLower.includes("ledger") || qLower.includes("math") || qLower.includes("reconcil") || qLower.includes("equation") || qLower.includes("arithmetic") || qLower.includes("discrepancy")) {
       answer = `Ledger arithmetic verification detected a critical formula anomaly on the Bank Statement. Opening Balance ($12,410.50) + Credits ($11,500.00) - Debits ($9,840.20) mathematically equates to $14,070.30. However, the reported closing balance was manually inflated to $94,200.30 (+Δ $80,130.00 discrepancy). Error Level Analysis (ELA) confirms localized digital font glyph splicing on digits '9' and '4'.`;
       citedFindings = ["MATH-001", "VIS-002", "VIS-003", "XCORR-001"];
-    } else if (qLower.includes("closing balance") || qLower.includes("balance") || qLower.includes("income") || qLower.includes("salary") || qLower.includes("money") || qLower.includes("bank")) {
+    } else if (qLower.includes("closing balance") || qLower.includes("balance") || qLower.includes("income") || qLower.includes("salary") || qLower.includes("money") || qLower.includes("bank") || qLower.includes("deposit")) {
       answer = `Based on multi-document cross-correlation, there is a severe discrepancy regarding applicant income. In Document '${c.documents[0]?.name || "Application Form"}', declared monthly income is $14,500.00 ($174,000.00/year). However, the Bank Statement (${c.documents[1]?.name || "Statement"}) reveals average quarterly deposits of only $3,833.33/month (+277% unexplained inflation). Furthermore, the closing balance was artificially altered from $14,070.30 to $94,200.30, exhibiting font glyph mismatch and ELA boundary splicing.`;
       citedFindings = ["XCORR-001", "VIS-002", "VIS-003"];
     } else if (qLower.includes("dob") || qLower.includes("birth") || qLower.includes("age") || qLower.includes("identity")) {
@@ -762,10 +782,20 @@ app.post('/api/cases/:id/ask-copilot', (req, res) => {
       answer = `All evidence collection and traceability within this case adheres to ISO/IEC 27037 (Digital Evidence Identification & Preservation) and NIST SP 800-86. Each uploaded document is cryptographically hashed with SHA-256 upon ingestion, and every anomaly is mapped to precise normalized bounding-box coordinates for audit defensibility.`;
       citedFindings = ["AUDIT-TRAIL", "CHAIN-OF-CUSTODY"];
     } else {
-      answer = `Analysis of Case ${c.id} indicates an overall Risk Score of ${c.risk_score} (${c.risk_level}). We identified ${c.anomalies_count} primary anomalies across ${c.documents.length} submitted documents. The primary issues involve digital font alteration on financial ledgers, date-of-birth overwriting on government ID, and cross-document income inflation. Review the Evidence Canvas and Cross-Doc Matrix for coordinate highlights.`;
-      citedFindings = c.cross_document_correlations ? c.cross_document_correlations.map(x => x.id) : [];
+      answer = `Regarding your inquiry on Case ${c.id} (${c.applicant_name}): The investigation shows an overall composite Risk Score of ${c.risk_score}/10 (${c.risk_level}). Primary evidence points to: 1) +277% income inflation between application form and bank statements, 2) +$80,130 forged closing balance calculation, 3) Date of birth overwrite on ID (+10 years), and 4) Signature clone transfer. Click any Suggested Question below or inspect the Evidence Canvas for visual heatmap proofs.`;
+      citedFindings = c.cross_document_correlations ? c.cross_document_correlations.map(x => x.id) : ["CASE-SUMMARY"];
     }
   }
+
+  res.json({
+    query: query || "Summary Inquiry",
+    response: answer,
+    cited_findings: citedFindings,
+    confidence_score: confidence,
+    model: "DataOps Forensic Contextual Reasoner v2.5",
+    timestamp: new Date().toISOString()
+  });
+});
 
   res.json({
     query: query || "Summary Inquiry",
