@@ -2,17 +2,17 @@ import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getAuditTrail, getCases, askCopilot } from '../api';
 import { PageHeader, ConfidenceBadge, RiskScore } from '../components/ui';
-import { 
-  History, 
-  Sparkles, 
-  Send, 
-  ShieldCheck, 
-  Lock, 
-  Terminal, 
-  Bot, 
-  User, 
-  Hash, 
-  CheckCircle2, 
+import {
+  History,
+  Sparkles,
+  Send,
+  ShieldCheck,
+  Lock,
+  Terminal,
+  Bot,
+  User,
+  Hash,
+  CheckCircle2,
   AlertTriangle,
   FileCheck2,
   HelpCircle,
@@ -237,22 +237,79 @@ export default function Scans() {
         let citations = [];
         const q = questionText.toLowerCase().trim();
 
-        // Check Greetings
+        // 1. Identity & Name Queries
+        const nameKeywords = ["what is your name", "what's your name", "who are you", "your name", "who am i talking to", "who is this", "tell me your name", "name?"];
+        const isName = nameKeywords.some(k => q.includes(k)) || q === "name" || q === "who are you?";
+
+        // 2. Creator & Team
+        const creatorKeywords = ["who made you", "who built you", "who created you", "who programmed you", "developer", "author", "kalai", "kalaiscript"];
+        const isCreator = creatorKeywords.some(k => q.includes(k));
+
+        // 3. Greetings & Status
         const greetings = ["hi", "hello", "hey", "good morning", "good afternoon", "good evening", "howdy", "sup", "greetings"];
         const isGreeting = greetings.some(g => q === g || q.startsWith(g + " ") || q.startsWith(g + "!") || q.startsWith(g + ","));
 
-        const helpKeywords = ["who are you", "what can you do", "help", "capabilities", "what are you", "how does this work"];
+        const statusKeywords = ["how are you", "how's it going", "how are you doing", "are you there", "what's up", "how do you do"];
+        const isStatus = statusKeywords.some(k => q.includes(k));
+
+        // 4. Politeness & Compliments
+        const thanksKeywords = ["thank you", "thanks", "good job", "great job", "awesome", "cool", "nice", "appreciate it"];
+        const isThanks = thanksKeywords.some(k => q.includes(k));
+
+        // 5. Jokes / Fun
+        const jokeKeywords = ["joke", "funny", "laugh", "tell me a joke"];
+        const isJoke = jokeKeywords.some(k => q.includes(k));
+
+        // 6. Capabilities & Help
+        const helpKeywords = ["what can you do", "help", "capabilities", "what are you", "how does this work", "what do you do"];
         const isHelp = helpKeywords.some(h => q.includes(h));
 
-        const summaryKeywords = ["summary", "overview", "what happened", "explain case", "tell me", "what is wrong", "findings", "report", "what did you find"];
+        // 7. Summary & Findings
+        const summaryKeywords = ["summary", "overview", "what happened", "explain case", "tell me about", "findings", "report", "what did you find", "what is wrong", "what is fake", "what is fraud", "what was altered", "tampering", "red flags"];
         const isSummary = summaryKeywords.some(s => q.includes(s));
 
-        if (isGreeting) {
-          answer = `Hello! I am your AI Forensic Reasoning Copilot assigned to Case ${activeCase.id} (${activeCase.applicant_name} • ${activeCase.organization}). I have cross-correlated the submitted evidence documents and identified ${activeCase.risk_score >= 7 ? 'critical fraud indicators' : 'the baseline record integrity'} (Risk Score: ${activeCase.risk_score}/10). How can I assist you with this investigation? You can ask me about income inflation, the date of birth alteration, signature forgery, or ledger calculation discrepancies.`;
+        // 8. Applicant / Target Entity
+        const applicantKeywords = ["who is the applicant", "who is robert", "who is elena", "who is apex", "who is being investigated", "who is the person", "who is the suspect", "applicant", "suspect", "organization", "company"];
+        const isApplicant = applicantKeywords.some(k => q.includes(k));
+
+        // 9. Documents
+        const documentKeywords = ["what documents", "which documents", "documents", "files", "what did they submit", "how many documents"];
+        const isDocuments = documentKeywords.some(k => q.includes(k));
+
+        // 10. Risk Score
+        const scoreKeywords = ["risk score", "score", "risk level", "how risky", "severity", "threat level"];
+        const isScore = scoreKeywords.some(k => q.includes(k));
+
+        if (isName) {
+          answer = `My name is Sentinel AI, your AI Forensic Reasoning Copilot on the DataOps Platform. I am an intelligent multi-document contextual reasoning engine built to detect fraud, visual manipulation (ELA), mathematical ledger errors, and identity discrepancies. Currently, I am analyzing Case ${activeCase.id} (${activeCase.applicant_name}). How can I assist you with this investigation?`;
+          citations = ["COPILOT-IDENTITY", "SENTINEL-AI"];
+        } else if (isCreator) {
+          answer = `I was engineered by KalaiScript for the DataOps Innovation Hackathon 2026. My architecture combines Computer Vision Error Level Analysis (ELA), cross-document entity correlation graphs, and ISO/IEC 27037 compliance logging to automate financial and security fraud detection.`;
+          citations = ["DEV-KALAISCRIPT", "DATAOPS-2026"];
+        } else if (isGreeting) {
+          answer = `Hello! I am Sentinel AI, your Forensic Reasoning Copilot for Case ${activeCase.id} (${activeCase.applicant_name} • ${activeCase.organization}). I have analyzed all submitted documents and flagged ${activeCase.risk_score >= 7 ? 'critical fraud indicators' : 'baseline record compliance'} (Risk Score: ${activeCase.risk_score}/10). How can I assist you today? You can ask me about income inflation, the date of birth alteration, signature forgery, or ledger calculation discrepancies.`;
           citations = ["CASE-CONTEXT", "AI-READY"];
+        } else if (isStatus) {
+          answer = `I'm operating at 100% capacity! All forensic neural pipelines, optical glyph verification nodes, and cryptographic ledgers are online. I am actively tracking documents in Case ${activeCase.id} with a Risk Score of ${activeCase.risk_score}/10 (${activeCase.risk_level}). What would you like to explore?`;
+          citations = ["SYSTEM-ONLINE", "PIPELINE-HEALTHY"];
+        } else if (isThanks) {
+          answer = `You're very welcome! I'm here to ensure complete forensic accuracy and court-admissible audit defensibility. Let me know if you need any other breakdowns or wish to review specific evidence coordinates.`;
+          citations = ["USER-ASSIST"];
+        } else if (isJoke) {
+          answer = `Why did the forged bank statement go to therapy? Because it had unresolved identity conflicts and couldn't balance its emotions! (Fortunately, our ledger validation caught the +$80,130 inflation immediately!) 😄`;
+          citations = ["FORENSIC-HUMOR"];
         } else if (isHelp) {
           answer = `I am the DataOps Contextual Intelligence Copilot, trained on ISO/IEC 27037 digital forensics standards. My capabilities include:\n1. Cross-Document Entity Correlation (exposing hidden contradictions between applications, tax forms, and bank statements)\n2. Computer Vision Error Level Analysis (ELA) for detecting pixel splicing and digital overwriting\n3. Mathematical Ledger Reconciliation (validating opening balances, credit/debit sums, and closing formulas)\n4. Signature & Biometric Stroke Analysis (detecting digital copy-paste duplication).\nAsk me any question regarding the evidence in Case ${activeCase.id}!`;
           citations = ["CAPABILITIES", "ISO-27037"];
+        } else if (isApplicant) {
+          answer = `The target under investigation is ${activeCase.applicant_name}, representing ${activeCase.organization}. This case is titled '${activeCase.title}'. Current status is '${activeCase.status}', evaluated at a composite Risk Score of ${activeCase.risk_score}/10 (${activeCase.risk_level}). Key issues identified: ${activeCase.summary}`;
+          citations = ["APPLICANT-RECORD", activeCase.id];
+        } else if (isDocuments) {
+          answer = `Case ${activeCase.id} contains examined evidence records including application forms, bank statements, and identity documents. All records are cryptographically anchored with SHA-256 hashes and mapped to normalized coordinates for forensic defensibility.`;
+          citations = ["DOC-LIST", "SHA-256"];
+        } else if (isScore) {
+          answer = `Case ${activeCase.id} has an aggregated Risk Score of ${activeCase.risk_score} / 10.0, classified as ${activeCase.risk_level}. This score is synthesized from detected anomalies across optical tampering, mathematical discrepancies, and entity cross-correlation contradictions.`;
+          citations = ["RISK-SCORE", activeCase.risk_level];
         } else if (isSummary) {
           answer = `Investigation Summary for ${activeCase.id} (${activeCase.title}):\n• Entity: ${activeCase.applicant_name} (${activeCase.organization})\n• Risk Assessment: ${activeCase.risk_score}/10 — ${activeCase.risk_level}\n• Primary Findings: ${activeCase.summary}\nClick any Suggested Question below or explore the Evidence Canvas to examine highlighted bounding boxes.`;
           citations = ["CASE-SUMMARY", "EVIDENCE-OVERVIEW"];
@@ -274,19 +331,19 @@ export default function Scans() {
           answer = "Case CASE-2026-8093 is a verified authentic baseline with a Risk Score of 1.1 (Low Risk - Verified Authentic). All tax registration numbers, organizational certificates, and banking records match regulatory databases with 100% mathematical consistency and zero visual pixel manipulation.";
           citations = ["VERIF-001", "VERIF-002", "VERIF-003"];
         } else {
-          if (q.includes('balance') || q.includes('closing') || q.includes('bank') || q.includes('income') || q.includes('deposit')) {
+          if (q.includes('balance') || q.includes('closing') || q.includes('bank') || q.includes('income') || q.includes('deposit') || q.includes('inflow')) {
             answer = "Based on multi-document cross-correlation, there is a severe discrepancy regarding applicant income. In Document 'Application Form', declared monthly income is $14,500.00 ($174,000.00/year). However, the Bank Statement reveals average quarterly deposits of only $3,833.33/month (+277% unexplained inflation). Furthermore, the closing balance was artificially altered from $14,070.30 to $94,200.30, exhibiting font glyph mismatch and ELA boundary splicing.";
             citations = ["XCORR-001", "VIS-002", "VIS-003"];
-          } else if (q.includes('dob') || q.includes('birth') || q.includes('age') || q.includes('id')) {
+          } else if (q.includes('dob') || q.includes('birth') || q.includes('age') || q.includes('id') || q.includes('year') || q.includes('born')) {
             answer = "The National ID card shows clear evidence of localized overwriting in the Date of Birth field. Error Level Analysis and pixel gradient variance show that the year was modified to '1985' over the original '1995', artificially increasing the applicant's age by 10 years to bypass underwriting thresholds. The surrounding background micro-pattern shows 28% discontinuity.";
             citations = ["VIS-004", "XCORR-002"];
-          } else if (q.includes('signature') || q.includes('sign')) {
+          } else if (q.includes('signature') || q.includes('sign') || q.includes('clone') || q.includes('forgery')) {
             answer = "Signature analysis identified an exact morphological duplicate (cosine stroke similarity 0.998) between the signature on the Application Form and the National ID card. Natural signatures by the same human never achieve identical pixel geometry; this confirms a digital copy-paste cutouts transfer.";
             citations = ["VIS-001", "XCORR-003"];
-          } else if (q.includes('ledger') || q.includes('math') || q.includes('reconcil') || q.includes('equation')) {
+          } else if (q.includes('ledger') || q.includes('math') || q.includes('reconcil') || q.includes('equation') || q.includes('arithmetic')) {
             answer = "Ledger arithmetic verification detected a critical formula anomaly on the Bank Statement. Opening Balance ($12,410.50) + Credits ($11,500.00) - Debits ($9,840.20) mathematically equates to $14,070.30. However, the reported closing balance was manually inflated to $94,200.30 (+Δ $80,130.00 discrepancy). Error Level Analysis (ELA) confirms localized digital font glyph splicing on digits '9' and '4'.";
             citations = ["MATH-001", "VIS-002", "VIS-003", "XCORR-001"];
-          } else if (q.includes('standard') || q.includes('iso') || q.includes('legal') || q.includes('court')) {
+          } else if (q.includes('standard') || q.includes('iso') || q.includes('legal') || q.includes('court') || q.includes('admissib')) {
             answer = "All evidence collection and traceability within this case adheres to ISO/IEC 27037 (Digital Evidence Identification & Preservation) and NIST SP 800-86. Each uploaded document is cryptographically hashed with SHA-256 upon ingestion, and every anomaly is mapped to precise normalized bounding-box coordinates for audit defensibility.";
             citations = ["AUDIT-TRAIL", "CHAIN-OF-CUSTODY"];
           } else {
@@ -434,9 +491,8 @@ export default function Scans() {
               {messages.map((m, idx) => (
                 <div
                   key={idx}
-                  className={`flex gap-3 leading-relaxed ${
-                    m.sender === 'user' ? 'justify-end' : 'justify-start'
-                  }`}
+                  className={`flex gap-3 leading-relaxed ${m.sender === 'user' ? 'justify-end' : 'justify-start'
+                    }`}
                 >
                   {m.sender === 'copilot' && (
                     <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shrink-0 mt-0.5 shadow">
@@ -444,11 +500,10 @@ export default function Scans() {
                     </div>
                   )}
 
-                  <div className={`p-4 rounded-2xl max-w-[85%] space-y-2.5 shadow-md ${
-                    m.sender === 'user'
+                  <div className={`p-4 rounded-2xl max-w-[85%] space-y-2.5 shadow-md ${m.sender === 'user'
                       ? 'bg-indigo-600 text-white rounded-tr-none'
                       : 'bg-gray-950 border border-gray-800 text-gray-200 rounded-tl-none'
-                  }`}>
+                    }`}>
                     <div className="flex items-center justify-between gap-3 text-[10px] opacity-70">
                       <span className="font-bold uppercase tracking-wider font-mono">
                         {m.sender === 'user' ? 'Investigator' : 'AI Forensic Reasoner'}
@@ -463,8 +518,8 @@ export default function Scans() {
                       <div className="pt-2 border-t border-gray-800/80 flex items-center gap-1.5 flex-wrap">
                         <span className="text-[10px] text-gray-500 font-mono font-bold">CITED FINDINGS:</span>
                         {m.citations.map((cId, i) => (
-                          <span 
-                            key={i} 
+                          <span
+                            key={i}
                             className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold"
                           >
                             {cId}
@@ -555,11 +610,10 @@ export default function Scans() {
 
             <button
               onClick={() => setFilterByCase(!filterByCase)}
-              className={`text-[10px] font-mono px-2.5 py-1 rounded-lg border transition font-semibold cursor-pointer ${
-                filterByCase 
-                  ? 'bg-indigo-600/30 text-indigo-300 border-indigo-500/50' 
+              className={`text-[10px] font-mono px-2.5 py-1 rounded-lg border transition font-semibold cursor-pointer ${filterByCase
+                  ? 'bg-indigo-600/30 text-indigo-300 border-indigo-500/50'
                   : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'
-              }`}
+                }`}
               title="Toggle filtering events for active case vs all cases"
             >
               {filterByCase ? `Case Only (${displayedLogs.length})` : `All Events (${auditLogs.length})`}
@@ -594,8 +648,8 @@ export default function Scans() {
                   const badge = getEventBadge(log.event);
                   const Icon = badge.icon;
                   return (
-                    <div 
-                      key={log.id} 
+                    <div
+                      key={log.id}
                       className="p-3.5 rounded-xl bg-gray-950 border border-gray-800/80 space-y-2 hover:border-gray-700 transition shadow-sm"
                     >
                       <div className="flex items-start justify-between gap-2">
