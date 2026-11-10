@@ -722,19 +722,21 @@ export default function Scans() {
         {/* Right Column: ISO/IEC 27037 Cryptographic Chain of Custody (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
           {/* Audit Header Card */}
-          <div className="p-3.5 rounded-xl bg-gray-900/80 border border-gray-800 flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-3">
+          <div className="p-3.5 rounded-xl bg-gray-900/80 border border-gray-800 flex items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
                 <Lock size={18} />
               </div>
-              <div>
-                <h2 className="text-xs md:text-sm font-bold text-white flex items-center gap-2">
-                  Cryptographic Chain of Custody
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xs md:text-sm font-bold text-white whitespace-nowrap">
+                    Chain of Custody
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-medium whitespace-nowrap shrink-0">
                     ISO 27037
                   </span>
-                </h2>
-                <p className="text-[11px] text-gray-400 mt-0.5">
+                </div>
+                <p className="text-[11px] text-gray-400 mt-0.5 truncate">
                   Immutable SHA-256 evidence audit trail
                 </p>
               </div>
@@ -742,13 +744,16 @@ export default function Scans() {
 
             <button
               onClick={() => setFilterByCase(!filterByCase)}
-              className={`text-[10px] font-mono px-2.5 py-1 rounded-lg border transition font-semibold cursor-pointer ${filterByCase
-                  ? 'bg-indigo-600/30 text-indigo-300 border-indigo-500/50'
+              className={`text-[11px] font-mono px-3 py-1.5 rounded-lg border transition font-semibold cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 shadow-sm ${filterByCase
+                  ? 'bg-indigo-600/30 text-indigo-300 border-indigo-500/50 hover:bg-indigo-600/40'
                   : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'
                 }`}
               title="Toggle filtering events for active case vs all cases"
             >
-              {filterByCase ? `Case Only (${displayedLogs.length})` : `All Events (${auditLogs.length})`}
+              <span>{filterByCase ? 'Case Only' : 'All Events'}</span>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${filterByCase ? 'bg-indigo-500/40 text-indigo-200' : 'bg-gray-700 text-gray-300'}`}>
+                {filterByCase ? displayedLogs.length : auditLogs.length}
+              </span>
             </button>
           </div>
 
