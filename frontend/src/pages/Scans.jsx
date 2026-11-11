@@ -272,6 +272,9 @@ function generateCopilotFallback(activeCase, queryText) {
   const isJoke =
     hasAny("joke", "funny", "laugh", "humor", "make me laugh");
 
+  const isPlatformAccess =
+    hasAny("how to access", "how do i access", "how to use", "how do i use", "how to navigate", "navigation", "where do i start", "guide", "workflow", "modules", "platform", "access this platform", "access the platform", "how access");
+
   const isHelp =
     hasAny("what can you do", "help", "capabilities", "what do you do", "how do you work", "how does this work", "features", "skills");
 
@@ -308,6 +311,9 @@ function generateCopilotFallback(activeCase, queryText) {
   } else if (isJoke) {
     answer = `Here is a forensic investigator joke for you! 😄\n\n**Why did the forged bank statement fail its job interview?**  \n*Because it couldn't balance its own accounts, and its fonts were caught acting completely out of character!* 🎭\n\n(Fortunately, our automated ledger validation caught the +$80,130 inflation immediately!) Would you like to inspect the altered transaction row?`;
     citations = ["FORENSIC-HUMOR"];
+  } else if (isPlatformAccess) {
+    answer = `### 🚀 How to Access & Navigate the DataOps Forensics Platform:\n\nWelcome to the **DataOps Document Forensics Workbench**! Here is your step-by-step guide to accessing and using every module:\n\n### 🧭 1. Investigation Modules (Left Navigation Menu):\n1. **📊 Forensic Overview** (\`/\`):\n   • High-level KPI dashboard displaying overall composite risk scores, active case summaries, and document ingestion tallies.\n2. **⚙️ 10-Stage Pipeline** (\`/pipeline\`):\n   • Run the automated forensics pipeline: Ingestion → OCR → Layout Understanding → Error Level Analysis (ELA) → Mathematical Reconciliation → Cross-Correlation.\n3. **🔍 Evidence Canvas** (\`/findings\`):\n   • Visual interactive viewer with bounding boxes, ELA heatmaps, and side-by-side pixel inspection of altered documents.\n4. **🔗 Cross-Doc Matrix** (\`/matrix\`):\n   • Correlation matrix comparing declared data (e.g. loan application) against third-party records (bank statements & identity cards).\n5. **📑 Investigation Dossier** (\`/dossier\`):\n   • Court-admissible formal report adhering to **ISO/IEC 27037** with executive summary, audit findings, and hash verification.\n6. **🤖 Audit & AI Copilot** (\`/audit\`):\n   • Chat with Sentinel AI (this copilot) to ask questions in real-time about evidence, math errors, and audit trails.\n\n### 💡 2. How to Investigate a Case:\n• **Switch Cases**: Use the **Target Dropdown** in the top header bar to choose between **CASE-2026-8091** (Commercial Loan), **CASE-2026-8092** (Medical Claim), or **CASE-2026-8093** (Authentic Baseline).\n• **Run Analysis**: Click the **Run Pipeline** button in the header bar.\n• **AI Chatbot**: Ask any question in this chat window or click any of the Suggested Question chips! You can also connect a free Gemini API key using the **Connect API Key ⚡** button to enable live LLM reasoning.`;
+    citations = ["PLATFORM-GUIDE", "WORKFLOW-001"];
   } else if (isHelp) {
     answer = `Here is what I can do as your **AI Forensic Reasoning Copilot**:\n\n### 🛡️ 1. Multi-Document Cross-Correlation\nI compare data across applications, tax filings, and bank statements to detect hidden contradictions (e.g., declared income of $14,500/mo vs verified bank credits of $3,833/mo).\n\n### 🔬 2. Visual Computer Vision Forensics (ELA)\nUsing Error Level Analysis (ELA) and pixel gradient filtering, I detect digital copy-paste patches, font weight/kerning inconsistencies, and overwritten text glyphs.\n\n### 🧮 3. Automated Mathematical Ledger Auditing\nI automatically verify financial calculations: \`Opening Balance + Total Credits - Total Debits = Reported Closing Balance\`. If there is any discrepancy, I pinpoint the exact dollar inflation.\n\n### ✍️ 4. Biometric & Signature Stroke Verification\nI perform morphological contour analysis to detect cut-and-paste signature cloning between documents with identical pixel geometry.\n\n### 🔒 5. ISO/IEC 27037 Cryptographic Chain of Custody\nEvery document and forensic scan event is cryptographically anchored with SHA-256 digests and immutable timestamps for court defensibility.\n\nAsk me any specific question about **Case ${activeCase.id}** to see it in action!`;
     citations = ["CAPABILITIES", "ISO-27037"];
@@ -392,6 +398,13 @@ export default function Scans() {
   const [loading, setLoading] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState(null);
 
+  // LLM API Key Settings State
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('copilot_api_key') || '');
+  const [apiProvider, setApiProvider] = useState(() => localStorage.getItem('copilot_api_provider') || 'gemini');
+  const [showApiModal, setShowApiModal] = useState(false);
+  const [tempApiKey, setTempApiKey] = useState(apiKey);
+  const [tempProvider, setTempProvider] = useState(apiProvider);
+
   // Copilot Chat State
   const [query, setQuery] = useState("");
   const [asking, setAsking] = useState(false);
@@ -458,7 +471,7 @@ export default function Scans() {
     setAsking(true);
 
     try {
-      const res = await askCopilot(selectedCaseId, questionText);
+      const res = await askCopilot(selectedCaseId, questionText, apiKey, apiProvider);
       setMessages(prev => [
         ...prev,
         {
@@ -571,6 +584,137 @@ export default function Scans() {
         </div>
       </div>
 
+      {/* LLM API Key Configuration Modal */}
+      {showApiModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                  <KeyRound size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Connect LLM API Key</h3>
+                  <p className="text-[11px] text-gray-400">Power this Copilot with real live AI</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowApiModal(false)}
+                className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800 text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] font-mono text-gray-300 block mb-1 font-semibold">
+                  AI Model Provider:
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTempProvider('gemini')}
+                    className={`p-2.5 rounded-xl border text-xs font-semibold flex flex-col items-start gap-1 transition ${
+                      tempProvider === 'gemini'
+                        ? 'bg-indigo-600/30 border-indigo-500 text-white'
+                        : 'bg-gray-950 border-gray-800 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 font-bold">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400"></span> Google Gemini
+                    </span>
+                    <span className="text-[10px] text-emerald-400 font-mono">Free Tier Available</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTempProvider('openai')}
+                    className={`p-2.5 rounded-xl border text-xs font-semibold flex flex-col items-start gap-1 transition ${
+                      tempProvider === 'openai'
+                        ? 'bg-indigo-600/30 border-indigo-500 text-white'
+                        : 'bg-gray-950 border-gray-800 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 font-bold">
+                      <span className="w-2 h-2 rounded-full bg-sky-400"></span> OpenAI GPT-4o
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-mono">Paid API Key</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-mono text-gray-300 font-semibold">
+                    {tempProvider === 'gemini' ? 'Gemini API Key:' : 'OpenAI API Key:'}
+                  </label>
+                  {tempProvider === 'gemini' && (
+                    <a
+                      href="https://aistudio.google.com/app/apikey"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] text-indigo-400 hover:text-indigo-300 underline font-mono"
+                    >
+                      Get free key ↗
+                    </a>
+                  )}
+                </div>
+                <input
+                  type="password"
+                  value={tempApiKey}
+                  onChange={(e) => setTempApiKey(e.target.value)}
+                  placeholder={tempProvider === 'gemini' ? 'AIzaSy...' : 'sk-...'}
+                  className="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Your key is securely stored in your local browser storage and used only to query the model grounded on active case evidence.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-800">
+              {apiKey && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem('copilot_api_key');
+                    localStorage.removeItem('copilot_api_provider');
+                    setApiKey('');
+                    setTempApiKey('');
+                    setShowApiModal(false);
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 border border-rose-500/30 transition mr-auto"
+                >
+                  Disconnect Key
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowApiModal(false)}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const trimmed = tempApiKey.trim();
+                  localStorage.setItem('copilot_api_key', trimmed);
+                  localStorage.setItem('copilot_api_provider', tempProvider);
+                  setApiKey(trimmed);
+                  setApiProvider(tempProvider);
+                  setShowApiModal(false);
+                }}
+                className="px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/30"
+              >
+                Save & Activate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Two-Column Workbench */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: AI Forensic Copilot (7 cols) */}
@@ -594,14 +738,33 @@ export default function Scans() {
               </div>
             </div>
 
-            <button
-              onClick={handleResetChat}
-              className="px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-[11px] font-medium border border-gray-700 flex items-center gap-1.5 transition"
-              title="Reset conversation for this case"
-            >
-              <RotateCcw size={12} />
-              <span className="hidden sm:inline">Reset</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setTempApiKey(apiKey);
+                  setTempProvider(apiProvider);
+                  setShowApiModal(true);
+                }}
+                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium border flex items-center gap-1.5 transition ${
+                  apiKey
+                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
+                    : 'bg-indigo-600/15 text-indigo-300 border-indigo-500/30 hover:bg-indigo-600/25'
+                }`}
+                title="Connect Gemini or OpenAI API Key for live AI responses"
+              >
+                <KeyRound size={12} className={apiKey ? "text-emerald-400" : "text-indigo-400"} />
+                <span className="hidden sm:inline">{apiKey ? 'API Key Active ⚡' : 'Connect API Key ⚡'}</span>
+              </button>
+
+              <button
+                onClick={handleResetChat}
+                className="px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-[11px] font-medium border border-gray-700 flex items-center gap-1.5 transition"
+                title="Reset conversation for this case"
+              >
+                <RotateCcw size={12} />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
+            </div>
           </div>
 
           {/* Chat Messages Box */}
@@ -821,6 +984,137 @@ export default function Scans() {
           </div>
         </div>
       </div>
+
+      {/* LLM API Key Configuration Modal */}
+      {showApiModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                  <KeyRound size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Connect LLM API Key</h3>
+                  <p className="text-[11px] text-gray-400">Power this Copilot with real live AI</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowApiModal(false)}
+                className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800 text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] font-mono text-gray-300 block mb-1 font-semibold">
+                  AI Model Provider:
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTempProvider('gemini')}
+                    className={`p-2.5 rounded-xl border text-xs font-semibold flex flex-col items-start gap-1 transition ${
+                      tempProvider === 'gemini'
+                        ? 'bg-indigo-600/30 border-indigo-500 text-white'
+                        : 'bg-gray-950 border-gray-800 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 font-bold">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400"></span> Google Gemini
+                    </span>
+                    <span className="text-[10px] text-emerald-400 font-mono">Free Tier Available</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTempProvider('openai')}
+                    className={`p-2.5 rounded-xl border text-xs font-semibold flex flex-col items-start gap-1 transition ${
+                      tempProvider === 'openai'
+                        ? 'bg-indigo-600/30 border-indigo-500 text-white'
+                        : 'bg-gray-950 border-gray-800 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 font-bold">
+                      <span className="w-2 h-2 rounded-full bg-sky-400"></span> OpenAI GPT-4o
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-mono">Paid API Key</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-mono text-gray-300 font-semibold">
+                    {tempProvider === 'gemini' ? 'Gemini API Key:' : 'OpenAI API Key:'}
+                  </label>
+                  {tempProvider === 'gemini' && (
+                    <a
+                      href="https://aistudio.google.com/app/apikey"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] text-indigo-400 hover:text-indigo-300 underline font-mono"
+                    >
+                      Get free key ↗
+                    </a>
+                  )}
+                </div>
+                <input
+                  type="password"
+                  value={tempApiKey}
+                  onChange={(e) => setTempApiKey(e.target.value)}
+                  placeholder={tempProvider === 'gemini' ? 'AIzaSy...' : 'sk-...'}
+                  className="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Your key is securely stored in your local browser storage and used only to query the model grounded on active case evidence.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-800">
+              {apiKey && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem('copilot_api_key');
+                    localStorage.removeItem('copilot_api_provider');
+                    setApiKey('');
+                    setTempApiKey('');
+                    setShowApiModal(false);
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 border border-rose-500/30 transition mr-auto"
+                >
+                  Disconnect Key
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowApiModal(false)}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const trimmed = tempApiKey.trim();
+                  localStorage.setItem('copilot_api_key', trimmed);
+                  localStorage.setItem('copilot_api_provider', tempProvider);
+                  setApiKey(trimmed);
+                  setApiProvider(tempProvider);
+                  setShowApiModal(false);
+                }}
+                className="px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/30"
+              >
+                Save & Activate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

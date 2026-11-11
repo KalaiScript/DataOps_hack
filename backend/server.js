@@ -902,44 +902,6 @@ If the user asks about anomalies or fraud, explain the exact evidence with numbe
     answer = `### 🚀 How to Access & Navigate the DataOps Forensics Platform:\n\nWelcome to the **DataOps Document Forensics Workbench**! Here is your step-by-step guide to accessing and using every module:\n\n### 🧭 1. Investigation Modules (Left Navigation Menu):\n1. **📊 Forensic Overview** (\`/\`):\n   • High-level KPI dashboard displaying overall composite risk scores, active case summaries, and document ingestion tallies.\n2. **⚙️ 10-Stage Pipeline** (\`/pipeline\`):\n   • Run the automated forensics pipeline: Ingestion → OCR → Layout Understanding → Error Level Analysis (ELA) → Mathematical Reconciliation → Cross-Correlation.\n3. **🔍 Evidence Canvas** (\`/findings\`):\n   • Visual interactive viewer with bounding boxes, ELA heatmaps, and side-by-side pixel inspection of altered documents.\n4. **🔗 Cross-Doc Matrix** (\`/matrix\`):\n   • Correlation matrix comparing declared data (e.g. loan application) against third-party records (bank statements & identity cards).\n5. **📑 Investigation Dossier** (\`/dossier\`):\n   • Court-admissible formal report adhering to **ISO/IEC 27037** with executive summary, audit findings, and hash verification.\n6. **🤖 Audit & AI Copilot** (\`/audit\`):\n   • Chat with Sentinel AI (this copilot) to ask questions in real-time about evidence, math errors, and audit trails.\n\n### 💡 2. How to Investigate a Case:\n• **Switch Cases**: Use the **Target Dropdown** in the top header bar to choose between **CASE-2026-8091** (Commercial Loan), **CASE-2026-8092** (Medical Claim), or **CASE-2026-8093** (Authentic Baseline).\n• **Run Analysis**: Click the **Run Pipeline** button in the header bar.\n• **AI Chatbot**: Ask any question in this chat window or click any of the Suggested Question chips! You can also connect a free Gemini API key to enable live LLM reasoning.`;
     citedFindings = ["PLATFORM-GUIDE", "WORKFLOW-001"];
   } else if (isHelp) {
-    hasAny("what can you do", "help", "capabilities", "what do you do", "how do you work", "how does this work", "features", "skills");
-
-  // 8. Summary & Overview & Fraud Explanations
-  const isSummary =
-    hasAny("summary", "overview", "what happened", "explain case", "tell me about", "findings", "report", "what did you find", "what is wrong", "what is fake", "what is fraud", "what was altered", "case about", "document fraud", "fraud", "red flags", "threats");
-
-  // 9. Applicant / Target Entity
-  const isApplicant =
-    hasAny("who is the applicant", "who is robert", "who is elena", "who is apex", "who is the person", "who is the suspect", "applicant", "suspect", "organization", "company", "who is he", "target");
-
-  // 10. Documents List
-  const isDocuments =
-    hasAny("what documents", "which documents", "documents", "files", "what did they submit", "how many documents", "uploaded files", "evidence files");
-
-  // 11. Risk Score
-  const isScore =
-    hasAny("risk score", "score", "risk level", "how risky", "severity", "threat level", "composite score");
-
-  // Execute Intent Match
-  if (isName) {
-    answer = `I am **Sentinel AI**, your dedicated **AI Forensic Reasoning Copilot** on the DataOps Platform! 🕵️‍♂️\n\nThink of me as your specialized investigative partner. I analyze submitted financial declarations, bank statements, and government IDs to detect subtle evidence of tampering that human reviewers might overlook.\n\n### 📋 Active Investigation Context:\n• **Case**: \`${c.id}\` — **${c.applicant_name}** (${c.organization})\n• **Risk Evaluation**: \`${c.risk_score} / 10.0\` (${c.risk_level})\n• **Examined Documents**: ${c.documents?.length || 3} submitted files\n\n### 💡 What would you like to explore?\n• Ask **"Summarize the fraud"** for a full case briefing.\n• Ask **"Why is the bank statement suspicious?"** to see the $80,130 ledger calculation disparity.\n• Inquire about the **Date of Birth overwrite** or **cloned signature**.\n• Request an **audit defensibility report** under ISO/IEC 27037 standards.`;
-    citedFindings = ["COPILOT-IDENTITY", "SENTINEL-AI"];
-  } else if (isCreator) {
-    answer = `Hello! I was designed and engineered by **KalaiScript** ([kalaiwebxd07@gmail.com](mailto:kalaiwebxd07@gmail.com)) for the **DataOps Innovation Hackathon 2026**! 🚀\n\nI am an **AI-Powered Forensic Reasoning Copilot** built to solve the complex challenge of detecting multi-document forgery, ledger fraud, and identity tampering across heterogeneous PDF and raster image submissions.\n\n### 🛠️ Architecture & Innovations:\n• **Lead Engineer**: KalaiScript\n• **Core Engines**: Computer Vision Error Level Analysis (ELA), cross-document entity correlation graphs, and automated mathematical ledger reconciliation.\n• **Standards**: Strictly adheres to ISO/IEC 27037 digital evidence preservation and NIST SP 800-86 guidelines with immutable SHA-256 chain-of-custody logging.\n\nFeel free to ask me anything about the evidence or detected anomalies in **Case ${c.id}**!`;
-    citedFindings = ["DEV-KALAISCRIPT", "DATAOPS-2026"];
-  } else if (isGreeting) {
-    answer = `Hello there! 👋 Welcome to the **DataOps Forensic Investigation Workbench**. I am **Sentinel AI**, your AI Forensic Reasoning Copilot.\n\nI have completed the multi-stage optical and contextual audit on **Case ${c.id}** (**${c.applicant_name}** • ${c.organization}).\n\n### 🔍 Quick Case Overview:\n• **Overall Risk Assessment**: \`${c.risk_score} / 10.0\` (${c.risk_level})\n• **Flagged Anomalies**: **${c.anomalies_count || 4} critical findings** across income, ledger balance arithmetic, and biometric stamps.\n\nHow can I assist your investigation today? You can choose any of the **Suggested Questions** below or type any question in natural language!`;
-    citedFindings = ["CASE-CONTEXT", "AI-READY"];
-  } else if (isStatus) {
-    answer = `I am operating at **100% operational efficiency**! ⚡\n\nAll forensic diagnostic engines are active and synchronized:\n• **OCR & Structural Layout Parser**: Active (100% character & token extraction)\n• **Computer Vision ELA Engine**: Online (Sub-pixel artifact localization)\n• **Cross-Document Correlation Graph**: Reconciled\n• **Cryptographic Provenance**: ISO/IEC 27037 SHA-256 Ledger intact\n\nCurrently active on **Case ${c.id}** (${c.applicant_name}). What would you like to inspect first?`;
-    citedFindings = ["SYSTEM-ONLINE", "PIPELINE-HEALTHY"];
-  } else if (isThanks) {
-    answer = `You are very welcome! 😊\n\nEnsuring full investigative accuracy, mathematical certainty, and court-admissible audit trails is my top priority. If you need further deep-dives into bounding-box coordinates, cross-document discrepancies, or an executive dossier export, just let me know!`;
-    citedFindings = ["USER-ASSIST"];
-  } else if (isJoke) {
-    answer = `Here is a forensic investigator joke for you! 😄\n\n**Why did the forged bank statement fail its job interview?**  \n*Because it couldn't balance its own accounts, and its fonts were caught acting completely out of character!* 🎭\n\n(Fortunately, our automated ledger validation caught the +$80,130 inflation immediately!) Would you like to inspect the altered transaction row?`;
-    citedFindings = ["FORENSIC-HUMOR"];
-  } else if (isHelp) {
     answer = `Here is what I can do as your **AI Forensic Reasoning Copilot**:\n\n### 🛡️ 1. Multi-Document Cross-Correlation\nI compare data across applications, tax filings, and bank statements to detect hidden contradictions (e.g., declared income of $14,500/mo vs verified bank credits of $3,833/mo).\n\n### 🔬 2. Visual Computer Vision Forensics (ELA)\nUsing Error Level Analysis (ELA) and pixel gradient filtering, I detect digital copy-paste patches, font weight/kerning inconsistencies, and overwritten text glyphs.\n\n### 🧮 3. Automated Mathematical Ledger Auditing\nI automatically verify financial calculations: \`Opening Balance + Total Credits - Total Debits = Reported Closing Balance\`. If there is any discrepancy, I pinpoint the exact dollar inflation.\n\n### ✍️ 4. Biometric & Signature Stroke Verification\nI perform morphological contour analysis to detect cut-and-paste signature cloning between documents with identical pixel geometry.\n\n### 🔒 5. ISO/IEC 27037 Cryptographic Chain of Custody\nEvery document and forensic scan event is cryptographically anchored with SHA-256 digests and immutable timestamps for court defensibility.\n\nAsk me any specific question about **Case ${c.id}** to see it in action!`;
     citedFindings = ["CAPABILITIES", "ISO-27037"];
   } else if (isApplicant) {
