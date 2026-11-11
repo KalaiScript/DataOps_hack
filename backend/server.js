@@ -703,13 +703,117 @@ app.post('/api/cases/:id/analyze', (req, res) => {
 
 // Ask AI Forensic Copilot (Explainability & Anomaly Reasoning)
 // Ask AI Forensic Copilot (Explainability & Anomaly Reasoning)
-app.post('/api/cases/:id/ask-copilot', (req, res) => {
+app.post('/api/cases/:id/ask-copilot', async (req, res) => {
   const db = readDb();
   const c = db.cases.find(x => x.id === req.params.id) || db.cases[0];
   if (!c) return res.status(404).json({ error: "Case not found" });
 
-  const { query } = req.body;
+  const { query, apiKey, apiProvider } = req.body;
   const rawQuery = (query || '').trim();
+  const keyToUse = apiKey || process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
+
+  // Real LLM API Execution if an API key is configured or passed from client
+  if (keyToUse && rawQuery) {
+    try {
+      const isGemini = keyToUse.startsWith('AIza') || apiProvider === 'gemini' || !keyToUse.startsWith('sk-');
+      const systemContext = `You are Sentinel AI, the expert AI Forensic Copilot engineered by KalaiScript for the DataOps Document Forensics Platform (SOC/NOC/VAPT Hackathon 2026).
+Compliance Standards: ISO/IEC 27037:2012, NIST SP 800-86.
+
+Case Context:
+- Case ID: ${c.id} (${c.title})
+- Applicant: ${c.applicant_name} (${c.organization})
+- Status: ${c.status}
+- Composite Risk Score: ${c.risk_score} / 10.0 (${c.risk_level})
+- Executive Summary: ${c.summary}
+- Documents Analyzed: ${(c.documents || []).map(d => `${d.name} (${d.type}, Risk: ${d.forensic_risk_score}/10)`).join(', ')}
+- Visual Anomalies: ${JSON.stringify((c.documents || []).flatMap(d => d.visual_anomalies || []))}
+- Cross-Document Conflicts: ${JSON.stringify(c.cross_document_correlations || [])}
+
+Platform Modules & Navigation Workflow:
+1. Forensic Overview (/): Executive KPI dashboard, risk posture, and case files.
+2. 10-Stage Pipeline (/pipeline): Automated multi-model pipeline from ingestion to ISO report.
+3. Evidence Canvas (/findings): Interactive evidence viewer, ELA heatmaps, and bounding-box coordinates.
+4. Cross-Doc Matrix (/matrix): Correlation grid flagging cross-document discrepancies.
+5. Investigation Dossier (/dossier): Formal ISO/IEC 27037 court-admissible audit dossier.
+6. Audit & AI Copilot (/audit): Conversational explainability copilot and cryptographic SHA-256 chain of custody.
+
+Instructions:
+Respond helpfully, clearly, and conversationally in GitHub-flavored Markdown (bolding, headers, bullet points).
+If the user asks "how to access this platform", explain how to use the 6 navigation modules and workflow.
+If the user asks about anomalies or fraud, explain the exact evidence with numbers, coordinates, and standard compliance.`;
+
+      if (isGemini) {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${keyToUse}`;
+        const response = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: 'user',
+                parts: [{ text: `${systemContext}\n\nInvestigator Query: ${rawQuery}` }]
+              }
+            ],
+            generationConfig: {
+              temperature: 0.4,
+              maxOutputTokens: 1000
+            }
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (generatedText) {
+            return res.json({
+              query: rawQuery,
+              response: generatedText,
+              cited_findings: ["LIVE-LLM", "GEMINI-1.5-FLASH"],
+              confidence_score: 0.99,
+              model: "Google Gemini 1.5 Flash (Live Grounded Reasoning)",
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+      } else {
+        // OpenAI
+        const openAiUrl = 'https://api.openai.com/v1/chat/completions';
+        const response = await fetch(openAiUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${keyToUse}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: systemContext },
+              { role: 'user', content: rawQuery }
+            ],
+            temperature: 0.5
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const generatedText = data.choices?.[0]?.message?.content;
+          if (generatedText) {
+            return res.json({
+              query: rawQuery,
+              response: generatedText,
+              cited_findings: ["LIVE-LLM", "GPT-4O-MINI"],
+              confidence_score: 0.99,
+              model: "OpenAI GPT-4o-mini (Live Grounded Reasoning)",
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+      }
+    } catch (llmErr) {
+      console.warn("LLM API failed, reverting to built-in reasoning engine:", llmErr.message);
+    }
+  }
+
   const qLower = rawQuery.toLowerCase();
   const cleanQ = qLower.replace(/[^\w\s]/g, ' ').trim();
   const words = cleanQ.split(/\s+/).filter(Boolean);
@@ -751,8 +855,53 @@ app.post('/api/cases/:id/ask-copilot', (req, res) => {
   const isJoke =
     hasAny("joke", "funny", "laugh", "humor", "make me laugh");
 
-  // 7. Capabilities & Help
+  // 7. Platform Access / Navigation / How to use queries (Matches "how to access this platform", "how to use", "how do i use", etc.)
+  const isPlatformAccess =
+    hasAny("how to access", "how do i access", "how to use", "how do i use", "how to navigate", "navigation", "where do i start", "guide", "workflow", "modules", "platform", "access this platform", "access the platform", "how access");
+
+  // 8. Capabilities & Help
   const isHelp =
+    hasAny("what can you do", "help", "capabilities", "what do you do", "how do you work", "how does this work", "features", "skills");
+
+  // 9. Summary & Overview & Fraud Explanations
+  const isSummary =
+    hasAny("summary", "overview", "what happened", "explain case", "tell me about", "findings", "report", "what did you find", "what is wrong", "what is fake", "what is fraud", "what was altered", "case about", "document fraud", "fraud", "red flags", "threats");
+
+  // 10. Applicant / Target Entity
+  const isApplicant =
+    hasAny("who is the applicant", "who is robert", "who is elena", "who is apex", "who is the person", "who is the suspect", "applicant", "suspect", "organization", "company", "who is he", "target");
+
+  // 11. Documents List
+  const isDocuments =
+    hasAny("what documents", "which documents", "documents", "files", "what did they submit", "how many documents", "uploaded files", "evidence files");
+
+  // 12. Risk Score
+  const isScore =
+    hasAny("risk score", "score", "risk level", "how risky", "severity", "threat level", "composite score");
+
+  // Execute Intent Match
+  if (isName) {
+    answer = `I am **Sentinel AI**, your dedicated **AI Forensic Reasoning Copilot** on the DataOps Platform! 🕵️‍♂️\n\nThink of me as your specialized investigative partner. I analyze submitted financial declarations, bank statements, and government IDs to detect subtle evidence of tampering that human reviewers might overlook.\n\n### 📋 Active Investigation Context:\n• **Case**: \`${c.id}\` — **${c.applicant_name}** (${c.organization})\n• **Risk Evaluation**: \`${c.risk_score} / 10.0\` (${c.risk_level})\n• **Examined Documents**: ${c.documents?.length || 3} submitted files\n\n### 💡 What would you like to explore?\n• Ask **"Summarize the fraud"** for a full case briefing.\n• Ask **"Why is the bank statement suspicious?"** to see the $80,130 ledger calculation disparity.\n• Inquire about the **Date of Birth overwrite** or **cloned signature**.\n• Request an **audit defensibility report** under ISO/IEC 27037 standards.`;
+    citedFindings = ["COPILOT-IDENTITY", "SENTINEL-AI"];
+  } else if (isCreator) {
+    answer = `Hello! I was designed and engineered by **KalaiScript** ([kalaiwebxd07@gmail.com](mailto:kalaiwebxd07@gmail.com)) for the **DataOps Innovation Hackathon 2026**! 🚀\n\nI am an **AI-Powered Forensic Reasoning Copilot** built to solve the complex challenge of detecting multi-document forgery, ledger fraud, and identity tampering across heterogeneous PDF and raster image submissions.\n\n### 🛠️ Architecture & Innovations:\n• **Lead Engineer**: KalaiScript\n• **Core Engines**: Computer Vision Error Level Analysis (ELA), cross-document entity correlation graphs, and automated mathematical ledger reconciliation.\n• **Standards**: Strictly adheres to ISO/IEC 27037 digital evidence preservation and NIST SP 800-86 guidelines with immutable SHA-256 chain-of-custody logging.\n\nFeel free to ask me anything about the evidence or detected anomalies in **Case ${c.id}**!`;
+    citedFindings = ["DEV-KALAISCRIPT", "DATAOPS-2026"];
+  } else if (isGreeting) {
+    answer = `Hello there! 👋 Welcome to the **DataOps Forensic Investigation Workbench**. I am **Sentinel AI**, your AI Forensic Reasoning Copilot.\n\nI have completed the multi-stage optical and contextual audit on **Case ${c.id}** (**${c.applicant_name}** • ${c.organization}).\n\n### 🔍 Quick Case Overview:\n• **Overall Risk Assessment**: \`${c.risk_score} / 10.0\` (${c.risk_level})\n• **Flagged Anomalies**: **${c.anomalies_count || 4} critical findings** across income, ledger balance arithmetic, and biometric stamps.\n\nHow can I assist your investigation today? You can choose any of the **Suggested Questions** below or type any question in natural language!`;
+    citedFindings = ["CASE-CONTEXT", "AI-READY"];
+  } else if (isStatus) {
+    answer = `I am operating at **100% operational efficiency**! ⚡\n\nAll forensic diagnostic engines are active and synchronized:\n• **OCR & Structural Layout Parser**: Active (100% character & token extraction)\n• **Computer Vision ELA Engine**: Online (Sub-pixel artifact localization)\n• **Cross-Document Correlation Graph**: Reconciled\n• **Cryptographic Provenance**: ISO/IEC 27037 SHA-256 Ledger intact\n\nCurrently active on **Case ${c.id}** (${c.applicant_name}). What would you like to inspect first?`;
+    citedFindings = ["SYSTEM-ONLINE", "PIPELINE-HEALTHY"];
+  } else if (isThanks) {
+    answer = `You are very welcome! 😊\n\nEnsuring full investigative accuracy, mathematical certainty, and court-admissible audit trails is my top priority. If you need further deep-dives into bounding-box coordinates, cross-document discrepancies, or an executive dossier export, just let me know!`;
+    citedFindings = ["USER-ASSIST"];
+  } else if (isJoke) {
+    answer = `Here is a forensic investigator joke for you! 😄\n\n**Why did the forged bank statement fail its job interview?**  \n*Because it couldn't balance its own accounts, and its fonts were caught acting completely out of character!* 🎭\n\n(Fortunately, our automated ledger validation caught the +$80,130 inflation immediately!) Would you like to inspect the altered transaction row?`;
+    citedFindings = ["FORENSIC-HUMOR"];
+  } else if (isPlatformAccess) {
+    answer = `### 🚀 How to Access & Navigate the DataOps Forensics Platform:\n\nWelcome to the **DataOps Document Forensics Workbench**! Here is your step-by-step guide to accessing and using every module:\n\n### 🧭 1. Investigation Modules (Left Navigation Menu):\n1. **📊 Forensic Overview** (\`/\`):\n   • High-level KPI dashboard displaying overall composite risk scores, active case summaries, and document ingestion tallies.\n2. **⚙️ 10-Stage Pipeline** (\`/pipeline\`):\n   • Run the automated forensics pipeline: Ingestion → OCR → Layout Understanding → Error Level Analysis (ELA) → Mathematical Reconciliation → Cross-Correlation.\n3. **🔍 Evidence Canvas** (\`/findings\`):\n   • Visual interactive viewer with bounding boxes, ELA heatmaps, and side-by-side pixel inspection of altered documents.\n4. **🔗 Cross-Doc Matrix** (\`/matrix\`):\n   • Correlation matrix comparing declared data (e.g. loan application) against third-party records (bank statements & identity cards).\n5. **📑 Investigation Dossier** (\`/dossier\`):\n   • Court-admissible formal report adhering to **ISO/IEC 27037** with executive summary, audit findings, and hash verification.\n6. **🤖 Audit & AI Copilot** (\`/audit\`):\n   • Chat with Sentinel AI (this copilot) to ask questions in real-time about evidence, math errors, and audit trails.\n\n### 💡 2. How to Investigate a Case:\n• **Switch Cases**: Use the **Target Dropdown** in the top header bar to choose between **CASE-2026-8091** (Commercial Loan), **CASE-2026-8092** (Medical Claim), or **CASE-2026-8093** (Authentic Baseline).\n• **Run Analysis**: Click the **Run Pipeline** button in the header bar.\n• **AI Chatbot**: Ask any question in this chat window or click any of the Suggested Question chips! You can also connect a free Gemini API key to enable live LLM reasoning.`;
+    citedFindings = ["PLATFORM-GUIDE", "WORKFLOW-001"];
+  } else if (isHelp) {
     hasAny("what can you do", "help", "capabilities", "what do you do", "how do you work", "how does this work", "features", "skills");
 
   // 8. Summary & Overview & Fraud Explanations
