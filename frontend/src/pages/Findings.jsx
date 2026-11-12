@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getCases } from '../api';
+import { DEFAULT_CASES } from '../defaultData';
 import { 
   PageHeader, 
   SeverityBadge, 
@@ -36,8 +37,8 @@ export default function Findings() {
   const navigate = useNavigate();
   const requestedCaseId = searchParams.get('case');
 
-  const [cases, setCases] = useState([]);
-  const [selectedCaseId, setSelectedCaseId] = useState("");
+  const [cases, setCases] = useState(DEFAULT_CASES);
+  const [selectedCaseId, setSelectedCaseId] = useState(requestedCaseId || DEFAULT_CASES[0]?.id || "CASE-2026-8091");
   const [selectedDocIndex, setSelectedDocIndex] = useState(0);
   const [selectedAnomalyId, setSelectedAnomalyId] = useState(null);
   const [activeTab, setActiveTab] = useState('anomalies'); // 'anomalies' | 'ocr'
@@ -47,20 +48,19 @@ export default function Findings() {
   const [showBoundingBoxes, setShowBoundingBoxes] = useState(true);
   const [showElaHeatmap, setShowElaHeatmap] = useState(false);
   const [highContrast, setHighContrast] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
       try {
-        setLoading(true);
         const res = await getCases();
-        setCases(res.data);
-        if (res.data.length > 0) {
+        if (res.data && res.data.length > 0) {
+          setCases(res.data);
           const matched = res.data.find(c => c.id === requestedCaseId);
           setSelectedCaseId(matched ? matched.id : res.data[0].id);
         }
       } catch (err) {
-        console.error(err);
+        console.warn("Using offline benchmark findings dataset.");
       } finally {
         setLoading(false);
       }

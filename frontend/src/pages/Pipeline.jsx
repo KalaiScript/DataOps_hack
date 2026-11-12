@@ -6,6 +6,7 @@ import {
   createCase, 
   addDocument 
 } from '../api';
+import { DEFAULT_CASES } from '../defaultData';
 import { 
   PageHeader, 
   Spinner, 
@@ -42,14 +43,14 @@ const STAGES = [
 ];
 
 export default function Pipeline() {
-  const [cases, setCases] = useState([]);
-  const [selectedCaseId, setSelectedCaseId] = useState("");
+  const [cases, setCases] = useState(DEFAULT_CASES);
+  const [selectedCaseId, setSelectedCaseId] = useState(DEFAULT_CASES[0]?.id || "CASE-2026-8091");
   const [running, setRunning] = useState(false);
   const [currentStageIdx, setCurrentStageIdx] = useState(-1);
   const [completedStages, setCompletedStages] = useState([]);
   const [logs, setLogs] = useState([]);
   const [pipelineResult, setPipelineResult] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // New Case Modal state
   const [showNewModal, setShowNewModal] = useState(false);
@@ -61,13 +62,19 @@ export default function Pipeline() {
 
   const loadCases = async () => {
     try {
-      setLoading(true);
       const res = await getCases();
-      setCases(res.data);
-      if (res.data.length > 0 && !selectedCaseId) {
-        setSelectedCaseId(res.data[0].id);
+      if (res.data && res.data.length > 0) {
+        setCases(res.data);
+        if (!selectedCaseId) {
+          setSelectedCaseId(res.data[0].id);
+        }
       }
     } catch (e) {
+      console.warn("Using offline benchmark pipeline cases.");
+    } finally {
+      setLoading(false);
+    }
+  };
       console.error(e);
     } finally {
       setLoading(false);

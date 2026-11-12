@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getAuditTrail, getCases, askCopilot } from '../api';
+import { DEFAULT_CASES, DEFAULT_AUDIT_LOGS } from '../defaultData';
 import { PageHeader, ConfidenceBadge, RiskScore } from '../components/ui';
 import {
   History,
