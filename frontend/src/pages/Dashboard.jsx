@@ -5,6 +5,7 @@ import {
   getCases, 
   resetDemoData 
 } from '../api';
+import { DEFAULT_STATS, DEFAULT_CASES } from '../defaultData';
 import { 
   PageHeader, 
   RiskScore, 

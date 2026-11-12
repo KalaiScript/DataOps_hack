@@ -25,6 +25,7 @@ import Correlation from './pages/RiskAnalysis'; // Cross-Document Correlation & 
 import Dossier from './pages/Reports'; // Official Investigation Dossier
 import AuditCopilot from './pages/Scans'; // Audit Trail & AI Forensic Copilot
 import { getCases, resetDemoData } from './api';
+import { DEFAULT_CASES } from './defaultData';
 
 const navItems = [
   { to: '/',            icon: ShieldAlert, label: 'Forensic Overview' },
@@ -46,19 +47,24 @@ const STEPS = [
 function WorkbenchShell() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [cases, setCases] = useState([]);
+  const [cases, setCases] = useState(DEFAULT_CASES);
   const [activeCaseId, setActiveCaseId] = useState('CASE-2026-8091');
   const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
+    // Check query param first
+    const params = new URLSearchParams(location.search);
+    const c = params.get('case');
+    if (c) setActiveCaseId(c);
+
     getCases().then(res => {
-      setCases(res.data);
-      // Check query param
-      const params = new URLSearchParams(location.search);
-      const c = params.get('case');
-      if (c) setActiveCaseId(c);
-      else if (res.data.length > 0) setActiveCaseId(res.data[0].id);
-    }).catch(console.error);
+      if (res.data && res.data.length > 0) {
+        setCases(res.data);
+        if (!c) setActiveCaseId(res.data[0].id);
+      }
+    }).catch(err => {
+      console.warn("Backend API offline or initializing; using default benchmark cases.");
+    });
   }, [location.search]);
 
   const handleCaseChange = (newId) => {
@@ -170,10 +176,10 @@ function WorkbenchShell() {
             <select
               value={activeCaseId}
               onChange={(e) => handleCaseChange(e.target.value)}
-              className="bg-gray-950 border border-gray-700 hover:border-gray-600 text-xs font-semibold text-white rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer w-36 sm:w-44 md:w-52 lg:w-56 truncate shrink-0"
+              className="bg-gray-950 border border-gray-700 hover:border-gray-600 text-xs font-semibold text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer w-44 sm:w-52 md:w-60 lg:w-64 truncate shrink-0 shadow-sm"
             >
               {cases.map((c) => (
-                <option key={c.id} value={c.id}>
+                <option key={c.id} value={c.id} className="bg-gray-950 text-white">
                   {c.id} — {c.applicant_name}
                 </option>
               ))}
