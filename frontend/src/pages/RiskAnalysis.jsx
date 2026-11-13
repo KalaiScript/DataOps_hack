@@ -58,11 +58,6 @@ export default function RiskAnalysis() {
       }
     }
     load();
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
   }, [requestedCaseId]);
 
   const activeCase = cases.find(c => c.id === selectedCaseId) || cases[0];
