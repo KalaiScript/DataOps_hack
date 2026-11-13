@@ -75,11 +75,6 @@ export default function Pipeline() {
       setLoading(false);
     }
   };
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     loadCases();
