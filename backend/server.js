@@ -827,11 +827,24 @@ If the user asks about anomalies or fraud, explain the exact evidence with numbe
   const hasAny = (...arr) => arr.some(w => cleanQ.includes(w) || words.includes(w));
   const hasAll = (...arr) => arr.every(w => cleanQ.includes(w) || words.includes(w));
 
-  // 1. Identity & Name Queries
+  // 0. User is asking about THEIR OWN name (must check before isName to prevent mis-match)
+  const isUserName =
+    cleanQ.includes("my name") ||
+    cleanQ.includes("what is my") ||
+    cleanQ.includes("whats my") ||
+    cleanQ.includes("what's my") ||
+    cleanQ.includes("who am i") ||
+    cleanQ.includes("who am i?") ||
+    cleanQ.includes("my identity") ||
+    (words.includes("my") && words.includes("name"));
+
+  // 1. Bot Identity & Name Queries (only "your name" / "who are you" — not "my name")
   const isName =
-    hasAny("what is your name", "whats your name", "what s your name", "who are you", "who r u", "your name", "tell me your name", "introduce yourself", "who am i talking to", "who is this") ||
-    (hasAny("what", "tell", "say", "know") && hasAny("name")) ||
-    (words.length <= 2 && words.includes("name"));
+    !isUserName && (
+      hasAny("what is your name", "whats your name", "what s your name", "who are you", "who r u", "your name", "tell me your name", "introduce yourself", "who am i talking to", "who is this") ||
+      (hasAny("your") && hasAny("name")) ||
+      (words.length <= 2 && words.includes("name") && !words.includes("my"))
+    );
 
   // 2. Creator & Developer Queries (Matches "who is made you", "who made you", "who created you", "who built this", "kalai", etc.)
   const isCreator =
@@ -880,7 +893,10 @@ If the user asks about anomalies or fraud, explain the exact evidence with numbe
     hasAny("risk score", "score", "risk level", "how risky", "severity", "threat level", "composite score");
 
   // Execute Intent Match
-  if (isName) {
+  if (isUserName) {
+    answer = `You are logged in as the **Investigator** on this DataOps Forensic Platform. 🕵️‍♂️\n\nI don't store personal user credentials or login names — your identity here is simply **"Investigator"** (the authorized forensic analyst conducting this audit).\n\n### 🔍 Current Session Context:\n• **Active Case**: \`${c.id}\` — **${c.applicant_name}** (${c.organization})\n• **Your Role**: Forensic Investigator / Fraud Analyst\n• **Platform**: DataOps AI Document Forensics Workbench\n• **AI Copilot**: Sentinel AI — ready to assist your investigation\n\nIf you are asking about the **case subject's** name, that is **${c.applicant_name}** from **${c.organization}**. Would you like a full profile on them?`;
+    citedFindings = ["INVESTIGATOR-SESSION", "USER-ROLE"];
+  } else if (isName) {
     answer = `I am **Sentinel AI**, your dedicated **AI Forensic Reasoning Copilot** on the DataOps Platform! 🕵️‍♂️\n\nThink of me as your specialized investigative partner. I analyze submitted financial declarations, bank statements, and government IDs to detect subtle evidence of tampering that human reviewers might overlook.\n\n### 📋 Active Investigation Context:\n• **Case**: \`${c.id}\` — **${c.applicant_name}** (${c.organization})\n• **Risk Evaluation**: \`${c.risk_score} / 10.0\` (${c.risk_level})\n• **Examined Documents**: ${c.documents?.length || 3} submitted files\n\n### 💡 What would you like to explore?\n• Ask **"Summarize the fraud"** for a full case briefing.\n• Ask **"Why is the bank statement suspicious?"** to see the $80,130 ledger calculation disparity.\n• Inquire about the **Date of Birth overwrite** or **cloned signature**.\n• Request an **audit defensibility report** under ISO/IEC 27037 standards.`;
     citedFindings = ["COPILOT-IDENTITY", "SENTINEL-AI"];
   } else if (isCreator) {
