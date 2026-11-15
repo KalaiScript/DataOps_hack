@@ -839,11 +839,12 @@ If the user asks about anomalies or fraud, explain the exact evidence with numbe
     cleanQ.includes("my role") ||
     (words.includes("my") && words.includes("name"));
 
-  // 1. Bot identity — "who are you", "your name", etc (not "my name")
+  // 1. Bot identity & Model / Architecture queries ("who are you", "what is your name", "which ai", "what model", etc.)
   const isName =
     !isUserName && (
-      hasAny("what is your name", "whats your name", "who are you", "who r u", "your name", "tell me your name", "introduce yourself", "who am i talking to", "you are") ||
+      hasAny("what is your name", "whats your name", "who are you", "who r u", "your name", "tell me your name", "introduce yourself", "who am i talking to", "you are", "which ai", "what ai", "what model", "which model", "ai model", "what llm", "which llm", "what system", "what engine") ||
       (hasAny("your") && hasAny("name")) ||
+      (hasAny("which", "what") && hasAny("ai", "model", "llm")) ||
       (words.length <= 2 && words.includes("name") && !words.includes("my"))
     );
 
