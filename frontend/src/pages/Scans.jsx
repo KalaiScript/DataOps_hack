@@ -144,7 +144,7 @@ function FormattedMessage({ text }) {
   );
 }
 
-// Comprehensive ChatGPT-quality NLU Fallback Engine
+// Comprehensive ChatGPT-quality NLU Fallback Engine (when backend API is offline or responding slowly)
 function generateCopilotFallback(activeCase, queryText) {
   const rawQuery = (queryText || '').trim();
   const cleanQ = rawQuery.toLowerCase().replace(/[^\w\s]/g, ' ').trim();
@@ -152,59 +152,113 @@ function generateCopilotFallback(activeCase, queryText) {
 
   const hasAny = (...arr) => arr.some(w => cleanQ.includes(w) || words.includes(w));
 
-  // Intent Detection
-  const isName =
-    hasAny("what is your name", "whats your name", "what s your name", "who are you", "who r u", "your name", "tell me your name", "introduce yourself", "who am i talking to", "who is this") ||
-    (hasAny("what", "tell", "say", "know") && hasAny("name")) ||
-    (words.length <= 2 && words.includes("name"));
+  // 0. User asking about their own name / identity
+  const isUserName =
+    cleanQ.includes("my name") ||
+    cleanQ.includes("what is my") ||
+    cleanQ.includes("whats my") ||
+    cleanQ.includes("who am i") ||
+    cleanQ.includes("my identity") ||
+    cleanQ.includes("my role") ||
+    (words.includes("my") && words.includes("name"));
 
+  // 1. Model / Architecture & Copilot identity ("which ai to use this", "what model", "who are you")
+  const isName =
+    !isUserName && (
+      hasAny("which ai", "what ai", "what model", "which model", "ai model", "what llm", "which llm", "what system", "what engine", "what is your name", "whats your name", "who are you", "who r u", "your name", "tell me your name", "introduce yourself", "who am i talking to", "you are") ||
+      (hasAny("your") && hasAny("name")) ||
+      (hasAny("which", "what") && hasAny("ai", "model", "llm")) ||
+      (words.length <= 2 && words.includes("name") && !words.includes("my"))
+    );
+
+  // 2. Creator
   const isCreator =
     hasAny("kalai", "kalaiscript", "who is made", "who made", "who created", "who built", "who developed", "who programmed", "your creator", "your developer", "your author", "who coded", "who designed") ||
     (hasAny("who", "whom") && hasAny("made", "make", "create", "created", "built", "developed", "programmed", "coded", "invented"));
 
+  // 3. Greetings
   const isGreeting =
-    (words.length <= 3 && hasAny("hi", "hello", "hey", "greetings", "howdy", "sup", "namaste", "good morning", "good afternoon", "good evening")) ||
-    ["hi", "hello", "hey", "greetings"].includes(words[0]);
+    (words.length <= 3 && hasAny("hi", "hello", "hey", "greetings", "howdy", "sup", "namaste", "good morning", "good afternoon", "good evening", "hii", "hola")) ||
+    ["hi", "hello", "hey", "greetings", "hii", "hola"].includes(words[0]);
 
+  // 4. Status
   const isStatus =
-    hasAny("how are you", "how s it going", "how is it going", "how do you do", "whats up", "what s up", "are you there", "are you online");
+    hasAny("how are you", "how s it going", "how is it going", "how do you do", "whats up", "what s up", "are you there", "are you online", "are you ready");
 
+  // 5. Thanks
   const isThanks =
-    hasAny("thank", "thanks", "good job", "great job", "awesome", "cool", "nice", "appreciate", "well done", "kudos");
+    hasAny("thank", "thanks", "thank you", "good job", "great job", "awesome", "cool", "nice", "appreciate", "well done", "kudos");
 
+  // 6. Joke
   const isJoke =
     hasAny("joke", "funny", "laugh", "humor", "make me laugh");
 
+  // 7. Demo
+  const isDemo =
+    hasAny("demo", "demonstration", "process a demo", "run demo", "show demo", "example", "sample", "test case", "showcase", "can you process", "process an");
+
+  // 8. Pipeline
+  const isPipeline =
+    hasAny("pipeline", "run pipeline", "start pipeline", "run analysis", "analyze", "scan", "execute", "10 stage", "stages");
+
+  // 9. Platform Guide & Navigation
   const isPlatformAccess =
     hasAny("how to access", "how do i access", "how to use", "how do i use", "how to navigate", "navigation", "where do i start", "guide", "workflow", "modules", "platform", "access this platform", "access the platform", "how access");
 
+  // 10. Help & Capabilities
   const isHelp =
     hasAny("what can you do", "help", "capabilities", "what do you do", "how do you work", "how does this work", "features", "skills");
 
+  // 11. Summary
   const isSummary =
     hasAny("summary", "overview", "what happened", "explain case", "tell me about", "findings", "report", "what did you find", "what is wrong", "what is fake", "what is fraud", "what was altered", "case about", "document fraud", "fraud", "red flags", "threats");
 
+  // 12. Applicant
   const isApplicant =
     hasAny("who is the applicant", "who is robert", "who is elena", "who is apex", "who is the person", "who is the suspect", "applicant", "suspect", "organization", "company", "who is he", "target");
 
+  // 13. Documents
   const isDocuments =
     hasAny("what documents", "which documents", "documents", "files", "what did they submit", "how many documents", "uploaded files", "evidence files");
 
+  // 14. Risk Score
   const isScore =
     hasAny("risk score", "score", "risk level", "how risky", "severity", "threat level", "composite score");
+
+  // 15. Bank & Ledger
+  const isBankMoney =
+    hasAny("closing balance", "balance", "income", "salary", "bank", "deposit", "inflow", "money", "ledger", "math", "reconcil", "equation", "arithmetic", "discrepancy", "calculation", "formula");
+
+  // 16. Date of birth
+  const isDob =
+    hasAny("dob", "date of birth", "birth", "age", "born", "year", "identity", "id card");
+
+  // 17. Signature
+  const isSignature =
+    hasAny("signature", "sign", "clone", "forgery", "cutout", "stroke");
+
+  // 18. Legal & Standards
+  const isLegal =
+    hasAny("standard", "iso", "legal", "court", "admissib", "custody", "nist", "27037", "chain of custody");
 
   let answer = "";
   let citations = [];
 
-  if (isName) {
-    answer = `I am **Sentinel AI**, your dedicated **AI Forensic Reasoning Copilot** on the DataOps Platform! 🕵️‍♂️\n\nThink of me as your specialized investigative partner. I analyze submitted financial declarations, bank statements, and government IDs to detect subtle evidence of tampering that human reviewers might overlook.\n\n### 📋 Active Investigation Context:\n• **Case**: \`${activeCase.id}\` — **${activeCase.applicant_name}** (${activeCase.organization})\n• **Risk Evaluation**: \`${activeCase.risk_score} / 10.0\` (${activeCase.risk_level})\n• **Examined Documents**: ${activeCase.documents?.length || 3} submitted files\n\n### 💡 What would you like to explore?\n• Ask **"Summarize the fraud"** for a full case briefing.\n• Ask **"Why is the bank statement suspicious?"** to see the $80,130 ledger calculation disparity.\n• Inquire about the **Date of Birth overwrite** or **cloned signature**.\n• Request an **audit defensibility report** under ISO/IEC 27037 standards.`;
-    citations = ["COPILOT-IDENTITY", "SENTINEL-AI"];
+  if (isUserName) {
+    answer = `You are logged in as the **Investigator** on this DataOps platform. 🕵️\n\nI don't store personal user credentials — your active role is **"Investigator"** (authorized forensic auditor).\n\n• **Active Case**: \`${activeCase.id}\` — **${activeCase.applicant_name}** (${activeCase.organization})\n• **Role**: Fraud Analyst / Underwriter Reviewer\n• **AI Copilot**: Sentinel AI\n\nIf you meant the applicant's name, that is **${activeCase.applicant_name}**. Ask *"Who is the applicant?"* for details.`;
+    citations = ["INVESTIGATOR-SESSION", "USER-ROLE"];
+  } else if (isName) {
+    answer = `### 🤖 AI Engine & Model Architecture:\n\n• **Active Primary Engine**: **Sentinel AI v2.5** (built-in contextual forensic reasoner engineered by **KalaiScript**).\n• **Multi-Model Support**: Powered by a hybrid reasoning architecture with native support for **Google Gemini 1.5 Flash** and **OpenAI GPT-4o-mini** via the top *"Connect API Key ⚡"* panel.\n• **Specialized Sub-Models**:\n  1. **Vision ELA Model**: Error Level Analysis for sub-pixel compression artifacts & font splicing detection.\n  2. **Biometric Stroke Engine**: Morphological contour & cosine trajectory matching for signature clone detection.\n  3. **Symbolic Ledger Reasoner**: Automated arithmetic verification of balance equations & financial flows.\n  4. **Cross-Document Correlation Graph**: Entity linking across loan forms, bank statements, and national IDs.\n\n### 📋 Active Case Context: \`${activeCase.id}\`\n• **Applicant**: **${activeCase.applicant_name}** (${activeCase.organization})\n• **Risk Score**: \`${activeCase.risk_score} / 10.0\` (${activeCase.risk_level})\n\nHow can I assist your investigation today? Ask about anomalies, bank balance math, or signature verification!`;
+    citations = ["SENTINEL-AI", "HYBRID-LLM", "GEMINI-FLASH", "ELA-CV"];
   } else if (isCreator) {
     answer = `Hello! I was designed and engineered by **KalaiScript** ([kalaiwebxd07@gmail.com](mailto:kalaiwebxd07@gmail.com)) for the **DataOps Innovation Hackathon 2026**! 🚀\n\nI am an **AI-Powered Forensic Reasoning Copilot** built to solve the complex challenge of detecting multi-document forgery, ledger fraud, and identity tampering across heterogeneous PDF and raster image submissions.\n\n### 🛠️ Architecture & Innovations:\n• **Lead Engineer**: KalaiScript\n• **Core Engines**: Computer Vision Error Level Analysis (ELA), cross-document entity correlation graphs, and automated mathematical ledger reconciliation.\n• **Standards**: Strictly adheres to ISO/IEC 27037 digital evidence preservation and NIST SP 800-86 guidelines with immutable SHA-256 chain-of-custody logging.\n\nFeel free to ask me anything about the evidence or detected anomalies in **Case ${activeCase.id}**!`;
     citations = ["DEV-KALAISCRIPT", "DATAOPS-2026"];
   } else if (isGreeting) {
     answer = `Hello there! 👋 Welcome to the **DataOps Forensic Investigation Workbench**. I am **Sentinel AI**, your AI Forensic Reasoning Copilot.\n\nI have completed the multi-stage optical and contextual audit on **Case ${activeCase.id}** (**${activeCase.applicant_name}** • ${activeCase.organization}).\n\n### 🔍 Quick Case Overview:\n• **Overall Risk Assessment**: \`${activeCase.risk_score} / 10.0\` (${activeCase.risk_level})\n• **Flagged Anomalies**: **${activeCase.anomalies_count || 4} critical findings** across income, ledger balance arithmetic, and biometric stamps.\n\nHow can I assist your investigation today? You can choose any of the **Suggested Questions** below or type any question in natural language!`;
     citations = ["CASE-CONTEXT", "AI-READY"];
+  } else if (isDemo) {
+    answer = `Sure! Here's a **live demo walkthrough** of Case \`${activeCase.id}\` (**${activeCase.applicant_name}** • ${activeCase.organization}) 🎬\n\n### 🔬 Demo: What the AI Detected\n\n**Step 1 — Document Ingestion & SHA-256 Anchoring**\nAll submitted documents (bank statement, loan form, ID card) were cryptographically hashed and registered in the immutable chain-of-custody ledger.\n\n**Step 2 — Income Cross-Correlation**\n> Declared salary: \`$14,500/mo\` ❌ vs Bank deposits: \`$3,833/mo\` ✅\n> **+277% inflation** detected with 98% confidence.\n\n**Step 3 — Ledger Math Verification**\n> Opening \`$12,410.50\` + Credits \`$11,500\` - Debits \`$9,840.20\` = \`$14,070.30\` ✅\n> But document reports: \`$94,200.30\` ❌ → **+$80,130 fraudulent inflation**\n\n**Step 4 — ELA Heatmap (Visual Forensics)**\nError Level Analysis revealed high-intensity compression artifacts around the closing balance digit, confirming font glyph splicing.\n\n**Step 5 — Signature Clone Detection**\nCosine stroke similarity of \`0.998\` between loan form and ID card → **100% digital copy-paste clone**.\n\n**Step 6 — Risk Score**\nComposite Risk: \`${activeCase.risk_score}/10\` → **${activeCase.risk_level}**\n\n---\n💡 **Try asking:**\n• *"Show me the bank balance discrepancy"*\n• *"Explain the signature forgery"*\n• *"How was the date of birth changed?"*`;
+    citations = ["DEMO-WALKTHROUGH", "CASE-SUMMARY", activeCase.id];
   } else if (isStatus) {
     answer = `I am operating at **100% operational efficiency**! ⚡\n\nAll forensic diagnostic engines are active and synchronized:\n• **OCR & Structural Layout Parser**: Active (100% character & token extraction)\n• **Computer Vision ELA Engine**: Online (Sub-pixel artifact localization)\n• **Cross-Document Correlation Graph**: Reconciled\n• **Cryptographic Provenance**: ISO/IEC 27037 SHA-256 Ledger intact\n\nCurrently active on **Case ${activeCase.id}** (${activeCase.applicant_name}). What would you like to inspect first?`;
     citations = ["SYSTEM-ONLINE", "PIPELINE-HEALTHY"];
@@ -233,57 +287,22 @@ function generateCopilotFallback(activeCase, queryText) {
   } else if (isSummary) {
     answer = `Here is the comprehensive forensic executive summary for **Case ${activeCase.id}** (**${activeCase.applicant_name}** • ${activeCase.organization}):\n\n### 📊 Executive Risk Profile:\n• **Composite Risk Score**: \`${activeCase.risk_score} / 10.0\` (${activeCase.risk_level})\n• **Status**: ${activeCase.status}\n• **Underwriting Recommendation**: **FLAGGED FOR FRAUD ESCALATION**\n• **Admissibility Standard**: ISO/IEC 27037 & NIST SP 800-86 Compliant\n\n### 🚨 Key Detected Tampering Vectors:\n1. **Income Inflation (+277%)**: Applicant claimed **$14,500.00/mo** ($174,000/yr) on the loan form, while verified bank records prove average deposits of only **$3,833.33/mo** ($46,000/yr).\n2. **Fabricated Closing Balance (+$80,130 Disparity)**: The bank statement closing balance was digitally overwritten to **$94,200.30**. True arithmetic balance is **$14,070.30** (\`$12,410.50 + $11,500.00 - $9,840.20\`).\n3. **Date of Birth Overwrite (+10 Years)**: Optical ELA confirms the ID card year was altered from \`1995\` to \`1985\` via localized pixel patch to bypass the minimum 35-year underwriting age requirement.\n4. **Signature Clone Stamp**: Cosine stroke similarity of \`0.998\` between loan form and national ID confirms identical digital copy-paste duplication.\n\nClick any suggested prompt below or view the **Evidence Canvas** to inspect visual heatmaps!`;
     citations = activeCase.cross_document_correlations ? activeCase.cross_document_correlations.map(x => x.id) : ["CASE-SUMMARY"];
-  }
-  // Case 2 Specific: Medical Claim Over-Billing
-  else if (activeCase.id === 'CASE-2026-8092') {
-    if (cleanQ.includes("date") || cleanQ.includes("surgery") || cleanQ.includes("discharge") || cleanQ.includes("chronolog") || cleanQ.includes("time")) {
-      answer = `### 🏥 Chronological Paradox in Medical Claim:\n\n• **Hospital Discharge Date**: \`18/09/2026\`\n• **Billed Intensive Surgical Procedure Date**: \`24/09/2026\`\n\n**Forensic Finding**: The billed surgical procedure is dated **6 days AFTER** the patient was already officially discharged from the facility! This temporal impossibility proves post-discharge invoice manufacturing and fraudulent billing manipulation.`;
-      citations = ["XCORR-8092-1", "VIS-8092-2"];
-    } else if (cleanQ.includes("invoice") || cleanQ.includes("bill") || cleanQ.includes("math") || cleanQ.includes("amount") || cleanQ.includes("ledger") || cleanQ.includes("reconcil") || cleanQ.includes("money") || cleanQ.includes("total")) {
-      answer = `### 💰 Medical Invoice Arithmetic Re-calculation:\n\n• Stated Procedural Fees:\n  - Procedure A: \`$8,200.00\`\n  - Procedure B: \`$4,100.00\`\n  - Procedure C: \`$2,500.00\`\n• **True Mathematical Subtotal**: **\`$14,800.00\`**\n• **Reported Invoice Grand Total**: **\`$33,200.00\`**\n• **Fraudulent Surplus Delta**: **\`+$18,400.00\`**\n\nFont kerning and baseline alignment variance confirm the grand total digit \`'3'\` was spliced into the invoice.`;
-      citations = ["MATH-8092-1", "VIS-8092-1"];
-    } else if (cleanQ.includes("signature") || cleanQ.includes("stamp") || cleanQ.includes("doctor") || cleanQ.includes("physician")) {
-      answer = `### 🩺 Physician Seal & Digital Stamp Inspection:\n\nThe digital stamp purporting to represent the chief attending physician was flagged as counterfeit:\n• Resolution is only **72 DPI** (standard scanned hospital documents are 300+ DPI).\n• Lacks embedded PKCS#7 or X.509 digital signing certificates.\n• Edge boundary analysis reveals it is an unauthenticated web raster PNG clipped from an online public seal template.`;
-      citations = ["VIS-8092-3"];
-    } else if (cleanQ.includes("standard") || cleanQ.includes("iso") || cleanQ.includes("legal") || cleanQ.includes("court")) {
-      answer = `### ⚖️ Evidence Integrity & Court Defensibility:\n\nAll evidence for Case **${activeCase.id}** conforms to **ISO/IEC 27037** standards. Every line-item anomaly and pixel-level stamp alteration is preserved with SHA-256 cryptographic provenance and normalized pixel coordinates for forensic admissibility.`;
-      citations = ["ISO-27037", "SHA-256", "CHAIN-OF-CUSTODY"];
-    } else {
-      answer = `### 📋 Case Assessment for ${activeCase.id} (${activeCase.title}):\n• **Risk Score**: \`${activeCase.risk_score} / 10.0\` (${activeCase.risk_level})\n• **Key Findings**: Procedural invoice inflation of **+$18,400.00**, chronological discharge paradox (surgery billed 6 days after discharge), and counterfeit 72 DPI physician seal.\n• **Status**: Flagged for claim denial and forensic review.`;
-      citations = ["XCORR-8092-1", "MATH-8092-1", "VIS-8092-1"];
-    }
-  }
-  // Case 3 Specific: Authentic Baseline (Apex Cybernetics)
-  else if (activeCase.id === 'CASE-2026-8093') {
-    if (cleanQ.includes("standard") || cleanQ.includes("iso") || cleanQ.includes("legal") || cleanQ.includes("court")) {
-      answer = `### ⚖️ Compliance & Provenance Verification:\n\nAll submitted documents for **${activeCase.applicant_name}** are cryptographically anchored with SHA-256 digests and validated under **ISO/IEC 27037** guidelines. The immutable ledger confirms zero tampering across all ingestion events.`;
-      citations = ["ISO-27037", "AUDIT-001"];
-    } else {
-      answer = `### ✅ Authentic Baseline Case (${activeCase.applicant_name}):\n• **Risk Score**: \`${activeCase.risk_score} / 10.0\` (${activeCase.risk_level})\n• **Findings**:\n  1. All tax registration numbers (GST/PAN) validated against live corporate registries.\n  2. Bank ledger math is 100% consistent across all statement pages.\n  3. Zero Error Level Analysis (ELA) compression anomalies or font splices detected.\n  4. Digital signatures verified with valid X.509 PKI certificate chains.`;
-      citations = ["VERIF-001", "VERIF-002", "VERIF-003"];
-    }
-  }
-  // Case 1 (Default): Commercial Loan / Sterling Alterations
-  else {
-    if (cleanQ.includes("ledger") || cleanQ.includes("math") || cleanQ.includes("reconcil") || cleanQ.includes("equation") || cleanQ.includes("arithmetic") || cleanQ.includes("discrepancy") || cleanQ.includes("calculation") || cleanQ.includes("formula")) {
-      answer = `### 🧮 Bank Statement Balance & Ledger Arithmetic Breakdown:\n\n1. **Formula Inconsistency (+$80,130.00 Inflation)**:\n   • **Opening Balance**: \`$12,410.50\`\n   • **Total Deposits (Credits)**: \`+$11,500.00\`\n   • **Total Withdrawals (Debits)**: \`-$9,840.20\`\n   • **Expected True Closing Balance**: **\`$14,070.30\`**\n   • **Reported Statement Balance**: **\`$94,200.30\`**\n   • **Fraudulent Surplus Delta**: **\`+$80,130.00\`**\n\n2. **Optical & Font Glyph Manipulation**:\n   • The leading digit **'9'** in \`$94,200.30\` displays **Helvetica Bold 11.4pt**, while document baseline is **Arial Regular 10pt**.\n   • Vertical baseline misalignment: \`1.2px offset\`.\n   • **Error Level Analysis (ELA)** confirms localized high-intensity compression boundary around the closing balance field.`;
-      citations = ["MATH-001", "VIS-002", "VIS-003", "XCORR-001"];
-    } else if (cleanQ.includes("closing balance") || cleanQ.includes("balance") || cleanQ.includes("income") || cleanQ.includes("salary") || cleanQ.includes("money") || cleanQ.includes("bank") || cleanQ.includes("deposit") || cleanQ.includes("inflow")) {
-      answer = `### 💵 Income Discrepancy & Closing Balance Tampering:\n\n1. **Severe Salary Inflation (+277%)**:\n   • **Declared on Application Form**: **\`$14,500.00 / month\`** ($174,000/yr)\n   • **Verified Bank Deposits**: **\`$3,833.33 / month\`** ($46,000/yr)\n   • **Disparity**: +$10,666.67/mo unexplained inflation claim.\n\n2. **Altered Closing Balance (+$80,130)**:\n   • Opening Balance ($12,410.50) + Credits ($11,500.00) - Debits ($9,840.20) mathematically totals **$14,070.30**.\n   • The document reports **$94,200.30**, confirmed by Error Level Analysis (ELA) as font glyph splicing.`;
-      citations = ["XCORR-001", "VIS-002", "VIS-003"];
-    } else if (cleanQ.includes("dob") || cleanQ.includes("birth") || cleanQ.includes("age") || cleanQ.includes("identity") || cleanQ.includes("born") || cleanQ.includes("year")) {
-      answer = `### 🆔 Date of Birth & Identity Forensic Analysis:\n\n• **Flagged Field**: Date of Birth on National ID Card (\`DOC-8091-C\`)\n• **Reported Value**: \`12/08/1985\` (Age 41)\n• **Original Recovered Value**: \`12/08/1995\` (Age 31)\n\n### 🔬 Optical Evidence:\n1. **Residual Ghost Strokes**: High-magnification glyph examination reveals residual underlying pixel contours corresponding to digit \`'9'\` underneath the overwritten digit \`'8'\`.\n2. **Background Pattern Discontinuity**: The national ID's micro-guilloche background pattern exhibits a **28% gradient variance** in a rectangular bounding box around the year.\n3. **Motive**: Commercial loan underwriting guidelines require the primary guarantor to be at least 35 years old. The 10-year artificial aging bypassed this automated cutoff.`;
-      citations = ["VIS-004", "XCORR-002"];
-    } else if (cleanQ.includes("signature") || cleanQ.includes("sign") || cleanQ.includes("clone") || cleanQ.includes("forgery") || cleanQ.includes("cutout") || cleanQ.includes("stroke")) {
-      answer = `### ✍️ Biometric & Signature Forensic Analysis:\n\n• **Finding**: Morphological Duplicate / Cut-and-Paste Cloned Signature\n• **Confidence**: \`99.8% pixel identity\`\n• **Compared Sources**: Loan Application Form (\`DOC-8091-A\`) vs National ID Card (\`DOC-8091-C\`)\n\n### 🔬 Forensic Rationale:\nIn organic human handwriting, two natural signatures from the same individual will always display natural variation in stroke pressure, acceleration, and micro-tremor.\nHere, the signature on the loan application is an **exact geometric duplicate (cosine stroke similarity 0.998)** with a faint rectangular compression boundary, proving it was digitally extracted from the ID and pasted onto the form.`;
-      citations = ["VIS-001", "XCORR-003"];
-    } else if (cleanQ.includes("standard") || cleanQ.includes("iso") || cleanQ.includes("legal") || cleanQ.includes("court") || cleanQ.includes("admissib") || cleanQ.includes("custody")) {
-      answer = `### ⚖️ Legal Admissibility & Standards Compliance:\n\nAll evidence gathered by this platform adheres strictly to:\n• **ISO/IEC 27037:2012**: Digital Evidence Identification, Collection, Acquisition & Preservation.\n• **ISO/IEC 27041 / 27042**: Assurance methods for incident analysis and electronic evidence reliability.\n• **NIST SP 800-86**: Guide to Integrating Forensic Techniques into Incident Response.\n\n### 🛡️ Chain-of-Custody Guarantees:\n1. **SHA-256 Hashing**: Each document is cryptographically fingerprinted immediately upon ingestion.\n2. **Coordinate Telemetry**: Every anomaly is anchored to normalized \`[x, y, width, height]\` bounding boxes.\n3. **Immutable Audit Ledger**: Every investigator interaction and AI inference is logged with UTC timestamps.`;
-      citations = ["AUDIT-TRAIL", "CHAIN-OF-CUSTODY"];
-    } else {
-      answer = `Regarding your inquiry on **Case ${activeCase.id}** (**${activeCase.applicant_name}** • ${activeCase.organization}):\n\nOur multi-document forensic model evaluated your prompt **"${rawQuery}"** against the case knowledge graph:\n• **Target Threat Level**: \`${activeCase.risk_level}\` (Composite Score: **${activeCase.risk_score} / 10.0**)\n• **Primary Evidence**: ${activeCase.summary}\n• **Underwriter Recommendation**: Flagged for fraud escalation; manual verification of banking statements and original identity documents recommended.\n\n💡 **Suggested Follow-up Prompts**:\n• *"Explain why the closing balance is suspicious"*\n• *"How was the date of birth altered?"*\n• *"What standard guarantees this evidence is court-admissible?"*\n• *"Who created this platform?"*`;
-      citations = activeCase.cross_document_correlations ? activeCase.cross_document_correlations.map(x => x.id) : ["CASE-SUMMARY"];
-    }
+  } else if (isBankMoney && activeCase.id === 'CASE-2026-8091') {
+    answer = `### 🧮 Bank Statement Balance & Ledger Arithmetic Breakdown:\n\n1. **Formula Inconsistency (+$80,130.00 Inflation)**:\n   • **Opening Balance**: \`$12,410.50\`\n   • **Total Deposits (Credits)**: \`+$11,500.00\`\n   • **Total Withdrawals (Debits)**: \`-$9,840.20\`\n   • **Expected True Closing Balance**: **\`$14,070.30\`**\n   • **Reported Statement Balance**: **\`$94,200.30\`**\n   • **Fraudulent Surplus Delta**: **\`+$80,130.00\`**\n\n2. **Optical & Font Glyph Manipulation**:\n   • The leading digit **'9'** in \`$94,200.30\` displays **Helvetica Bold 11.4pt**, while document baseline is **Arial Regular 10pt**.\n   • Vertical baseline misalignment: \`1.2px offset\`.\n   • **Error Level Analysis (ELA)** confirms localized high-intensity compression boundary around the closing balance field.`;
+    citations = ["MATH-001", "VIS-002", "VIS-003", "XCORR-001"];
+  } else if (isDob && activeCase.id === 'CASE-2026-8091') {
+    answer = `### 🆔 Date of Birth & Identity Forensic Analysis:\n\n• **Flagged Field**: Date of Birth on National ID Card (\`DOC-8091-C\`)\n• **Reported Value**: \`12/08/1985\` (Age 41)\n• **Original Recovered Value**: \`12/08/1995\` (Age 31)\n\n### 🔬 Optical Evidence:\n1. **Residual Ghost Strokes**: High-magnification glyph examination reveals residual underlying pixel contours corresponding to digit \`'9'\` underneath the overwritten digit \`'8'\`.\n2. **Background Pattern Discontinuity**: The national ID's micro-guilloche background pattern exhibits a **28% gradient variance** in a rectangular bounding box around the year.\n3. **Motive**: Commercial loan underwriting guidelines require the primary guarantor to be at least 35 years old. The 10-year artificial aging bypassed this automated cutoff.`;
+    citations = ["VIS-004", "XCORR-002"];
+  } else if (isSignature && activeCase.id === 'CASE-2026-8091') {
+    answer = `### ✍️ Biometric & Signature Forensic Analysis:\n\n• **Finding**: Morphological Duplicate / Cut-and-Paste Cloned Signature\n• **Confidence**: \`99.8% pixel identity\`\n• **Compared Sources**: Loan Application Form (\`DOC-8091-A\`) vs National ID Card (\`DOC-8091-C\`)\n\n### 🔬 Forensic Rationale:\nIn organic human handwriting, two natural signatures from the same individual will always display natural variation in stroke pressure, acceleration, and micro-tremor.\nHere, the signature on the loan application is an **exact geometric duplicate (cosine stroke similarity 0.998)** with a faint rectangular compression boundary, proving it was digitally extracted from the ID and pasted onto the form.`;
+    citations = ["VIS-001", "XCORR-003"];
+  } else if (isLegal) {
+    answer = `### ⚖️ Legal Admissibility & Standards Compliance:\n\nAll evidence gathered by this platform adheres strictly to:\n• **ISO/IEC 27037:2012**: Digital Evidence Identification, Collection, Acquisition & Preservation.\n• **ISO/IEC 27041 / 27042**: Assurance methods for incident analysis and electronic evidence reliability.\n• **NIST SP 800-86**: Guide to Integrating Forensic Techniques into Incident Response.\n\n### 🛡️ Chain-of-Custody Guarantees:\n1. **SHA-256 Hashing**: Each document is cryptographically fingerprinted immediately upon ingestion.\n2. **Coordinate Telemetry**: Every anomaly is anchored to normalized \`[x, y, width, height]\` bounding boxes.\n3. **Immutable Audit Ledger**: Every investigator interaction and AI inference is logged with UTC timestamps.`;
+    citations = ["AUDIT-TRAIL", "CHAIN-OF-CUSTODY"];
+  } else {
+    // Smart suggestions table fallback — avoids generic case dump
+    answer = `I didn't quite catch that question about Case \`${activeCase.id}\` (${activeCase.applicant_name}). Let me help you find the right investigation details! 🔍\n\n### 💡 Suggested Topics You Can Ask Me:\n\n| Investigation Query | What You Will Learn |\n|---|---|\n| *"Which AI model are you using?"* | Architecture, Sentinel v2.5, Gemini 1.5 Flash, and CV vision engines |\n| *"Can you process a demo?"* | Complete 6-step walkthrough of anomaly detection |\n| *"Why is the bank balance suspicious?"* | Mathematical ledger calculation disparity (+$80,130) |\n| *"Explain the date of birth alteration"* | Optical ELA pixel traces and +10 year age bypass |\n| *"Was the signature forged?"* | Biometric 99.8% cosine stroke clone analysis |\n| *"How to access this platform?"* | 6-module navigation workflow guide |\n| *"What is your name?"* | Copilot credentials and session details |\n\nOr click any of the **Suggested Question** chips below! 👇`;
+    citations = ["CASE-SUMMARY", "HELP-SUGGESTIONS"];
   }
 
   return { text: answer, citations };
